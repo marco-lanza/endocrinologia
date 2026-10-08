@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="it" class="transition-colors duration-300">
+<head>
+    <meta charset="UTF-8">
+    <!-- Meta tag ottimizzato per impedire lo zoom automatico e goffo su smartphone -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Quiz Chirurgia Endocrina</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .slide-in-right { animation: slideInRight 0.3s ease-out forwards; }
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+        /* Stili standard (Light) */
+        .correct-btn { background-color: #f0fdf4 !important; color: #166534 !important; border-color: #4ade80 !important; }
+        .wrong-btn { background-color: #fef2f2 !important; color: #991b1b !important; border-color: #f87171 !important; }
+        
+        /* Stili Dark Mode */
+        .dark .correct-btn { background-color: #064e3b !important; color: #4ade80 !important; border-color: #059669 !important; }
+        .dark .wrong-btn { background-color: #450a0a !important; color: #f87171 !important; border-color: #dc2626 !important; }
+        
+        .disabled-btn { opacity: 0.4; cursor: not-allowed; }
+
+        /* Scrollbar Minimal */
+        .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+        .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+        .scrollbar-thin::-webkit-scrollbar-thumb { background-color: #d1d5db; border-radius: 20px; }
+        .dark .scrollbar-thin::-webkit-scrollbar-thumb { background-color: #4b5563; }
+    </style>
+</head>
+<body class="text-gray-800 dark:text-gray-200 h-screen flex flex-col bg-white dark:bg-black font-light selection:bg-gray-100 dark:selection:bg-white/20 transition-colors duration-300 overflow-x-hidden">
+
+    <!-- Header -->
+    <header class="pt-5 pb-4 px-4 sm:px-8 shrink-0 flex flex-col justify-center items-center border-b border-gray-100 dark:border-white/10 transition-colors relative z-10 bg-white dark:bg-black">
+        <h1 class="text-sm font-semibold tracking-widest text-gray-900 dark:text-white uppercase transition-colors text-center"><i class="fas fa-notes-medical mr-2 sm:mr-3"></i>Quiz Chirurgia Endocrina</h1>
+        <button onclick="toggleDarkMode()" id="theme-toggle" class="mt-3 text-[9px] font-bold text-gray-400 dark:text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 transition-colors uppercase tracking-widest px-4 py-1.5 border border-gray-100 dark:border-white/10 rounded-full flex items-center justify-center gap-2 bg-transparent hover:bg-gray-50 dark:hover:bg-white/5">
+            <i class="fas fa-moon" id="theme-icon"></i> <span id="theme-text">Dark Mode</span>
+        </button>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow overflow-y-auto overflow-x-hidden p-4 md:p-8 flex justify-center w-full relative z-0">
+        <div class="w-full max-w-3xl h-full flex flex-col py-2 sm:py-4">
+
+            <!-- HOME VIEW -->
+            <div id="home-view" class="fade-in flex flex-col h-full justify-between">
+                
+                <!-- Grafico Andamento -->
+                <div class="flex-grow flex flex-col justify-center min-h-[140px] sm:min-h-[160px] relative mb-6 mt-2">
+                    <h3 class="text-[9px] font-bold text-gray-300 dark:text-gray-600 uppercase tracking-widest absolute top-0 left-0 transition-colors">Andamento Storico</h3>
+                    <div class="relative w-full h-full max-h-[35vh] mt-6">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                    <div id="no-history-msg" class="hidden absolute inset-0 flex flex-col items-center justify-center text-gray-300 dark:text-gray-700 font-light text-sm transition-colors text-center px-4">
+                        <i class="fas fa-chart-line text-2xl mb-2 opacity-30"></i>
+                        Inizia un quiz per generare il grafico
+                    </div>
+                </div>
+
+                <!-- Statistiche Globali -->
+                <div class="flex justify-center items-center gap-4 sm:gap-12 md:gap-16 mb-8 transition-colors">
+                    <div class="text-center flex flex-col items-center">
+                        <span class="text-[7px] font-bold text-gray-400 dark:text-gray-600 uppercase tracking-widest mb-1">Quiz</span>
+                        <span class="text-sm sm:text-base font-medium text-gray-800 dark:text-gray-300" id="stat-quizzes">0</span>
+                    </div>
+                    <div class="w-px h-6 bg-gray-100 dark:bg-white/5"></div>
+                    <div class="text-center flex flex-col items-center">
+                        <span class="text-[7px] font-bold text-gray-400 dark:text-gray-600 uppercase tracking-widest mb-1">Esatte</span>
+                        <span class="text-sm sm:text-base font-medium text-gray-800 dark:text-gray-300" id="stat-accuracy">0%</span>
+                    </div>
+                    <div class="w-px h-6 bg-gray-100 dark:bg-white/5"></div>
+                    <div class="text-center flex flex-col items-center">
+                        <span class="text-[7px] font-bold text-gray-400 dark:text-gray-600 uppercase tracking-widest mb-1">Viste</span>
+                        <div class="flex items-baseline gap-1">
+                            <span class="text-sm sm:text-base font-medium text-gray-800 dark:text-gray-300" id="stat-questions">0</span>
+                            <span class="text-[10px] sm:text-[11px] font-light text-gray-400 dark:text-gray-500" id="stat-coverage">0%</span>
+                        </div>
+                    </div>
+                    <div class="w-px h-6 bg-gray-100 dark:bg-white/5"></div>
+                    <button onclick="resetData()" class="flex flex-col items-center justify-center text-gray-300 dark:text-gray-700 hover:text-red-500 dark:hover:text-red-500 transition-colors p-2" title="Azzera storico e statistiche">
+                        <i class="fas fa-trash-alt text-[12px] sm:mb-0.5"></i>
+                    </button>
+                </div>
+
+                <!-- Box interattivi: Incolonnati su mobile, affiancati su PC -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 shrink-0 mt-auto pb-4 md:pb-0">
+                    <!-- Nuovo Quiz -->
+                    <div class="border-2 border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-white/5 rounded-3xl p-5 sm:p-6 flex flex-col justify-between transition-all duration-300 hover:bg-gray-50/80 dark:hover:bg-white/10 hover:border-gray-400 dark:hover:border-white/30">
+                        <div class="flex flex-col items-center">
+                            <span class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-4 sm:mb-6">Nuovo Quiz</span>
+                            <div class="flex items-center justify-center mb-6 sm:mb-8">
+                                <button onclick="changeNum(-1)" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-gray-800 dark:hover:text-white transition rounded-full hover:bg-gray-100 dark:hover:bg-white/5"><i class="fas fa-minus text-xs"></i></button>
+                                <input type="number" id="num-questions" min="1" max="270" value="100" oninput="if(this.value > 270) this.value = 270;" class="w-16 mx-2 text-center bg-transparent text-4xl sm:text-5xl font-light text-gray-800 dark:text-white focus:outline-none border-b border-gray-300 dark:border-white/20 focus:border-gray-500 dark:focus:border-white/50 [-moz-appearance:_textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-colors">
+                                <button onclick="changeNum(1)" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-gray-800 dark:hover:text-white transition rounded-full hover:bg-gray-100 dark:hover:bg-white/5"><i class="fas fa-plus text-xs"></i></button>
+                            </div>
+                        </div>
+                        <button onclick="startQuiz('new')" class="w-full bg-gray-900 dark:bg-white hover:bg-black dark:hover:bg-gray-200 text-white dark:text-black text-[10px] sm:text-xs tracking-widest uppercase font-medium py-3.5 sm:py-4 rounded-2xl transition-all duration-300 shadow-sm mt-auto">
+                            Avvia
+                        </button>
+                    </div>
+
+                    <!-- Ripasso Errori -->
+                    <div class="border-2 border-red-200 dark:border-red-900/50 bg-red-50/10 dark:bg-red-900/10 rounded-3xl p-5 sm:p-6 flex flex-col justify-between transition-all duration-300 hover:bg-red-50/30 dark:hover:bg-red-900/20 hover:border-red-400 dark:hover:border-red-800">
+                        <div class="flex flex-col items-center">
+                            <span class="text-[10px] font-bold text-red-400 dark:text-red-500 uppercase tracking-widest mb-4 sm:mb-6 transition-colors">Da Ripassare</span>
+                            <div class="text-4xl sm:text-5xl font-light text-red-500 dark:text-red-400 mb-6 sm:mb-8 transition-colors" id="error-count">0</div>
+                        </div>
+                        <button id="btn-review-errors" onclick="startQuiz('review')" class="w-full bg-red-500 hover:bg-red-600 disabled:bg-gray-100 dark:disabled:bg-black disabled:text-gray-400 dark:disabled:text-gray-600 disabled:border disabled:border-gray-200 dark:disabled:border-white/10 disabled:shadow-none disabled:cursor-not-allowed text-white text-[10px] sm:text-xs tracking-widest uppercase font-medium py-3.5 sm:py-4 rounded-2xl transition-all duration-300 shadow-sm mt-auto">
+                            Ripassa
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QUIZ VIEW (Responsive: 1 colonna impilata su mobile, 2 colonne su Desktop) -->
+            <div id="quiz-view" class="fade-in hidden flex flex-col md:flex-row w-full h-full justify-start items-start gap-4 md:gap-6">
+                
+                <!-- Colonna Principale: Barra, Domanda, Risposte -->
+                <div class="flex-grow flex flex-col min-w-0 w-full">
+                    
+                    <!-- Header del Quiz e Progress Bar -->
+                    <div class="mb-4 sm:mb-6 mt-1 sm:mt-2 shrink-0">
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest transition-colors" id="quiz-progress">1 / 20</span>
+                            <span class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest transition-colors" id="score-live">Punti: 0</span>
+                        </div>
+                        <div class="w-full bg-gray-100 dark:bg-white/5 h-1.5 rounded-full overflow-hidden transition-colors">
+                            <div id="progress-bar-fill" class="bg-gray-800 dark:bg-white h-full w-0 transition-all duration-300 ease-out"></div>
+                        </div>
+                    </div>
+
+                    <!-- Contenitore Animato della Domanda -->
+                    <div id="question-anim-container" class="flex-grow flex flex-col justify-start w-full">
+                        
+                        <div class="mb-6 flex justify-between items-start gap-3 sm:gap-4">
+                            <h2 class="text-lg sm:text-xl md:text-2xl font-light text-gray-800 dark:text-white leading-snug transition-colors" id="question-text">Testo domanda</h2>
+                            <button id="btn-flag" onclick="toggleFlag()" class="text-gray-300 dark:text-gray-600 hover:text-yellow-400 dark:hover:text-yellow-500 transition-colors text-lg sm:text-xl shrink-0 mt-1 p-2 -mr-2" title="Salva nei dubbi">
+                                <i class="fas fa-flag"></i>
+                            </button>
+                        </div>
+
+                        <div class="space-y-3 mb-6" id="options-container">
+                            <!-- Bottoni opzioni via JS -->
+                        </div>
+
+                        <!-- Area Feedback (senza scrollbar) -->
+                        <div id="feedback-area" class="p-4 sm:p-5 rounded-2xl hidden border-2 transition-all mb-4">
+                            <div class="flex items-start">
+                                <div id="feedback-icon" class="text-lg mr-3 sm:mr-4 mt-0.5 shrink-0"></div>
+                                <div class="flex-grow">
+                                    <h3 id="feedback-title" class="text-[10px] font-bold uppercase tracking-widest mb-2"></h3>
+                                    <p id="feedback-explanation" class="text-gray-600 dark:text-gray-300 text-xs sm:text-sm font-light leading-relaxed"></p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+
+                <!-- Colonna/Riga Pulsanti -->
+                <!-- Su Desktop: A destra, allineato alla barra. Su Mobile: In basso, a tutta larghezza -->
+                <div class="shrink-0 flex flex-row md:flex-col justify-end w-full md:w-auto pt-2 md:pt-3.5 pb-8 md:pb-0 gap-3">
+                    <button id="btn-next" onclick="nextQuestion()" class="hidden w-full md:w-12 h-12 rounded-xl md:rounded-full bg-gray-900 dark:bg-white hover:bg-black dark:hover:bg-gray-200 text-white dark:text-black flex items-center justify-center transition-all duration-300 shadow-sm" title="Prossima domanda">
+                        <span class="md:hidden text-[10px] sm:text-xs tracking-widest uppercase font-medium mr-2">Prossima</span>
+                        <i class="fas fa-arrow-right md:text-lg"></i>
+                    </button>
+                    <button id="btn-finish" onclick="finishQuiz()" class="hidden w-full md:w-12 h-12 rounded-xl md:rounded-full bg-gray-900 dark:bg-white hover:bg-black dark:hover:bg-gray-200 text-white dark:text-black flex items-center justify-center transition-all duration-300 shadow-sm" title="Termina quiz">
+                        <span class="md:hidden text-[10px] sm:text-xs tracking-widest uppercase font-medium mr-2">Termina</span>
+                        <i class="fas fa-check md:text-lg"></i>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- RESULT VIEW -->
+            <div id="result-view" class="fade-in hidden flex flex-col h-full justify-center items-center w-full pb-6">
+                <div class="text-center mb-8 sm:mb-12 w-full mt-4 sm:mt-0">
+                    <h2 class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4 transition-colors">Esito Sessione</h2>
+                    <div class="text-6xl sm:text-8xl font-light text-gray-800 dark:text-white my-4 sm:my-6 transition-colors" id="final-score-text"></div>
+                    <p class="text-xs sm:text-sm font-light text-gray-400 dark:text-gray-500 mt-2 tracking-wide transition-colors" id="final-score-subtext"></p>
+                </div>
+
+                <div id="session-errors-container" class="mb-8 sm:mb-10 w-full hidden">
+                    <h3 class="text-[10px] font-bold text-red-300 dark:text-red-500 uppercase tracking-widest mb-4 sm:mb-6 border-b border-red-50 dark:border-red-900/30 pb-3 transition-colors">Dettaglio Errori & Dubbi</h3>
+                    <div class="space-y-6 max-h-[45vh] overflow-y-auto pr-2 sm:pr-4 scrollbar-thin" id="errors-list">
+                        <!-- Popolato via JS -->
+                    </div>
+                </div>
+
+                <div id="perfect-score-msg" class="mb-8 sm:mb-12 hidden text-center text-green-400 dark:text-green-500 w-full transition-colors">
+                    <i class="fas fa-check-circle text-4xl sm:text-5xl mb-4 font-light"></i>
+                    <p class="text-xs sm:text-sm font-light tracking-widest uppercase">Nessun Errore</p>
+                </div>
+
+                <button onclick="returnToHome()" class="w-full sm:w-auto bg-gray-900 dark:bg-white hover:bg-black dark:hover:bg-gray-200 text-white dark:text-black text-[10px] sm:text-xs tracking-widest uppercase font-medium py-3.5 sm:py-4 px-12 rounded-2xl sm:rounded-xl transition-all duration-300 shadow-sm mt-auto sm:mt-0">
+                    Home
+                </button>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // IL DATABASE COMPLETO DELLE 260 DOMANDE
+        const allQuestions = [
+            { id: 1, text: "Sintomi nella sindrome di Zollinger-Ellison", options: ["Esoftalmo, gozzo, ipereccitabilità muscolare", "Ipertensione, cefalea, aritmia", "Asma, diarrea, flushing cutaneo, cisti ossee, calcoli renali, ulcere multiple", "Ipersecrezione acida gastrica, ulcere multiple, diarrea"], correct: 3, explanation: "La Sindrome di Zollinger-Ellison (ZES) è caratterizzata dalla classica triade: tumore secernente gastrina (gastrinoma), ipersecrezione acida gastrica e malattia ulcerosa peptica severa (spesso ulcere multiple e refrattarie), spesso accompagnata da diarrea a causa dell'inattivazione degli enzimi pancreatici per l'eccesso di acido." },
+            { id: 2, text: "Nella sindrome di Zollinger-Ellison c'è un eccesso di", options: ["Glucagone", "Insulina", "Serotonina", "Calcitonina", "Gastrina"], correct: 4, explanation: "La base patogenetica della ZES è l'iperproduzione autonoma di gastrina da parte di un tumore neuroendocrino (gastrinoma)." },
+            { id: 3, text: "L'area triangolare dove originano i gastrinomi", options: ["Nella coda del pancreas", "Al legamento di Treitz", "Nella testa del pancreas", "Nel corpo del pancreas"], correct: 2, explanation: "L'area a maggior incidenza è il Triangolo del Gastrinoma (o di Passaro), i cui vertici sono: confluenza dotto cistico/coledoco, giunzione D2/D3 del duodeno, e collo/corpo del pancreas. Fino al 90% dei gastrinomi si trova in quest'area (che include testa del pancreas e duodeno)." },
+            { id: 4, text: "L'ormone gastrina stimola", options: ["Le cellule G dell'antro gastrico", "Le cellule ossintiche del fondo gastrico", "Le cellule beta del pancreas", "Le cellule alfa del pancreas"], correct: 1, explanation: "La gastrina viaggia nel circolo sanguigno e si lega ai recettori CCK-B sulle cellule parietali (o ossintiche) del fondo e corpo gastrico, stimolando potentemente la secrezione di acido cloridrico." },
+            { id: 5, text: "percentuale totale sopravvivenza cancro alla tiroide:", options: ["98%", "75%", "50%", "25%"], correct: 0, explanation: "è tra le domande che ho aggiunto dopo e non ho voglia di cercare una spiegazione. GRAZIE DELLA COMPRENSIONE ♥" },
+            { id: 6, text: "Il test di provocazione con calcio e.v. nei carcinoidi", options: ["Non è seguito da alcun effetto", "È seguito dalla morte del paziente", "Aumenta i livelli ematici di serotonina", "Aumenta i livelli ematici di gastrina"], correct: 2, explanation: "L'infusione di calcio stimola in modo esagerato le cellule neuroendocrine tumorali. Nel caso del carcinoide, provoca un picco di rilascio di serotonina (mentre nel gastrinoma causa un picco di gastrina)." },
+            { id: 7, text: "Le metastasi epatiche da carcinoide possono essere trattate con", options: ["Resezione epatica", "Termoablazione a radiofrequenza", "Chemioembolizzazione", "Tutte le precedenti"], correct: 3, explanation: "L'approccio alle metastasi epatiche da NET (Tumori Neuroendocrini) è multimodale. Include chirurgia (se resecabili), terapie ablative locali (RFA) e terapie locoregionali come la chemioembolizzazione (TACE) per ridurre la massa e controllare la sindrome ormonale." },
+            { id: 8, text: "Le paratiroidi ectopiche possono trovarsi", options: ["Nella lingua", "Nelle labbra", "Nell'osso ioide", "Nel timo"], correct: 3, explanation: "Durante lo sviluppo embriologico, le paratiroidi inferiori (III tasca) migrano verso il basso insieme al timo. Possono fermarsi lungo il tragitto o finire nel mediastino all'interno o in prossimità del timo." },
+            { id: 9, text: "Il colore delle paratiroidi è", options: ["Bianco", "Giallo", "Verde", "Rosso", "Blu"], correct: 1, explanation: "Macroscopicamente, le paratiroidi normali hanno un tipico colore giallo-senape o giallo-marrone a causa del loro contenuto di grasso, che aiuta il chirurgo a distinguerle dal tessuto tiroideo (più rosso/carnoso) e dai linfonodi." },
+            { id: 10, text: "L'iperparatiroidismo primario può essere dovuto a", options: ["Un singolo adenoma", "Adenomi multipli", "Iperplasia", "Carcinoma", "Tutte le precedenti"], correct: 4, explanation: "L'iperparatiroidismo primario è causato per l'80-85% da un adenoma singolo, 10-15% da iperplasia di tutte e 4 le ghiandole (spesso in contesti MEN), e in meno dell'1% da un carcinoma paratiroideo." },
+            { id: 11, text: "Il gastrinoma", options: ["È sempre benigno", "È sempre maligno", "È maligno nel 60% dei casi", "È maligno nel 25% dei casi"], correct: 2, explanation: "Circa il 60-90% dei gastrinomi sono considerati maligni per la loro alta propensione a dare metastasi ai linfonodi locoregionali e al fegato." },
+            { id: 12, text: "La zona fascicolata della ghiandola surrenale produce", options: ["Glucocorticoidi", "Mineralcorticoidi", "Ormoni sessuali", "Epinefrina", "Nessuna delle precedenti"], correct: 0, explanation: "La corteccia surrenale si divide in 3 zone (GFR): Glomerulare (Aldosterone/mineralcorticoidi), Fascicolata (Cortisolo/glucocorticoidi), Reticolare (Androgeni/ormoni sessuali)." },
+            { id: 13, text: "La midollare della ghiandola surrenale (cellule cromaffini) produce", options: ["Cortisolo e serotonina", "Epinefrina e somatostatina", "Norepinefrina ed epinefrina", "Somatostatina e cortisolo", "Serotonina e norepinefrina"], correct: 2, explanation: "La midollare del surrene è un ganglio simpatico modificato che secerne catecolamine (principalmente epinefrina/adrenalina e, in minor misura, norepinefrina/noradrenalina) nel circolo sistemico." },
+            { id: 14, text: "Nel siero dell'iperparatiroidismo primario", options: ["Il calcio è basso, il PTH è elevato", "Il calcio è normale, il PTH è elevato", "Il calcio è elevato, il PTH è elevato", "Il calcio è elevato, il PTH è basso", "Nessuna delle risposte è corretta"], correct: 2, explanation: "Il marker biochimico classico è l'ipercalcemia (dovuta all'eccesso di riassorbimento osseo e renale) associata a un paratormone (PTH) elevato o inappropriatamente normale superiore, poiché la ghiandola tumorale non risponde al feedback negativo del calcio." },
+            { id: 15, text: "Nel feocromocitoma il rilascio ormonale è seguito da", options: ["Tachicardia", "Broncocostrizione", "Bradicardia", "Ipoglicemia", "Nessuna delle precedenti"], correct: 0, explanation: "Il rilascio di catecolamine causa iperattivazione simpatica, che si manifesta tipicamente con palpitazioni (tachicardia), ipertensione grave e sudorazione." },
+            { id: 16, text: "Erspamer, un candidato al premio Nobel, ha descritto", options: ["La norepinefrina", "L'epinefrina", "La serotonina", "La calcitonina", "La tirosina"], correct: 2, explanation: "Vittorio Erspamer, farmacologo italiano, scoprì e isolò negli anni '30-'40 l'enteramina, che in seguito fu identificata essere la serotonina (5-idrossitriptamina)." },
+            { id: 17, text: "Cosa NON è tipico della sindrome da carcinoide", options: ["Diarrea", "Malassorbimento", "Pellagra", "Malformazione della valvola cardiaca sinistra", "Malformazione della valvola cardiaca destra"], correct: 3, explanation: "La cardiopatia da carcinoide colpisce tipicamente il cuore DESTRO (valvola tricuspide e polmonare) perché le sostanze vasoattive vengono inattivate dai polmoni prima di raggiungere il cuore sinistro. Il lato sinistro è coinvolto solo se c'è un difetto del setto (es. forame ovale pervio) o un carcinoide bronchiale." },
+            { id: 18, text: "Il segno di Chvostek è provocato da", options: ["Stimolazione del braccio con un ago", "Gonfiaggio di un bracciale pressorio su un braccio", "La manovra di Valsalva", "Percussione della guancia", "Somministrazione di calcio e.v."], correct: 3, explanation: "Il segno di Chvostek è la contrazione dei muscoli facciali provocata dalla percussione del nervo facciale (sulla guancia, davanti al trago) ed è indicativo di ipocalcemia (ipereccitabilità neuromuscolare). Il bracciale pressorio descrive invece il segno di Trousseau." },
+            { id: 19, text: "La resezione di un nervo laringeo causa", options: ["Paralisi bilaterale delle corde vocali", "Paralisi omolaterale delle corde vocali", "Paralisi controlaterale delle corde vocali", "Paralisi temporanea delle corde vocali", "Disfagia e broncospasmo"], correct: 1, explanation: "La lesione di un singolo nervo laringeo ricorrente paralizza la corda vocale dello stesso lato (omolaterale), provocando disfonia o voce bitonale." },
+            { id: 20, text: "Nella triade di Whipple per l'insulinoma la glicemia è", options: ["< 90 mg/dL", "< 80 mg/dL", "< 70 mg/dL", "< 60 mg/dL", "< 50 mg/dL"], correct: 4, explanation: "La Triade di Whipple richiede: 1) Sintomi di ipoglicemia a digiuno o post-esercizio; 2) Glicemia documentata bassa (generalmente < 50 mg/dL) durante i sintomi; 3) Sollievo dai sintomi dopo somministrazione di glucosio." },
+            { id: 21, text: "Nella triade di Whipple per l'insulinoma c'è", options: ["I sintomi sono ridotti dal glucosio e.v.", "Diarrea e malassorbimento", "Cefalea e ipertensione", "Coma e morte", "Nessuna delle precedenti"], correct: 0, explanation: "Il third elemento della triade di Whipple è la risoluzione immediata dei sintomi neuroglicopenici o simpaticomimetici in seguito alla somministrazione di glucosio (es. zolletta di zucchero o glucosio e.v.)." },
+            { id: 22, text: "Qual è l'attuale tendenza epidemiologica dell'incidenza del tumore alla tiroide in Italia?", options: ["È tra le più basse al mondo", "È in costante aumento, in gran parte per la diagnosi precoce di microcarcinomi", "È in rapida diminuzione grazie alla iodoprofilassi", "È stabile ma colpisce esclusivamente i maschi"], correct: 1, explanation: "L'incidenza in Italia è tra le più alte a livello globale ed è in costante aumento da decenni. Gran parte di questo incremento è attribuibile alla 'sovradiagnosi', ovvero il frequente riscontro ecografico occasionale di piccoli carcinomi papillari indolenti (microcarcinomi)." },
+            { id: 23, text: "In relazione alla ghiandola tiroidea il nervo laringeo ricorrente è vicino al", options: ["Polo superiore", "Istmo tiroideo", "Arteria tiroidea superiore", "Arteria tiroidea inferiore", "Nessuna delle precedenti"], correct: 3, explanation: "Anatomicamente, il nervo laringeo ricorrente incrocia (o passa molto vicino) i rami dell'arteria tiroidea inferiore vicino al polo inferiore della tiroide e nel solco tracheoesofageo. Questo è un punto critico in chirurgia." },
+            { id: 24, text: "In Italia qual è stato l'effetto del disastro di Chernobyl sull'incidenza dei tumori alla tiroide", options: ["Terribile", "Un aumento rapido e consistente", "Nessun aumento", "Una riduzione", "L'Italia non è stata minimamente coinvolta"], correct: 2, explanation: "Sebbene Chernobyl abbia causato un forte aumento dei carcinomi papillari pediatrici nelle aree limitrofe all'esplosione (Bielorussia, Ucraina), in Italia l'esposizione allo Iodio-131 non è stata sufficiente a causare un aumento statisticamente rilevabile a livello epidemiologico." },
+            { id: 25, text: "Il tumore anaplastico della tiroide", options: ["È il tumore tiroideo più frequente", "Appare come un'area calda alla scintigrafia", "Modifica presto i parametri funzionali", "Le cellule tumorali sono indifferenziate", "Nessuna delle precedenti"], correct: 3, explanation: "Il carcinoma anaplastico è caratterizzato da cellule totalmente indifferenziate che non somigliano più ai tireociti, non captano iodio e crescono in modo estremamente aggressivo." },
+            { id: 26, text: "Il tumore midollare della tiroide", options: ["Produce calcitonina", "Produce serotonina", "Non è mai bilaterale", "È un componente della MEN 1", "Entrambe le risposte c e d sono corrette"], correct: 0, explanation: "Il carcinoma midollare origina dalle cellule C parafollicolari (derivate dalla cresta neurale) che secernono calcitonina. È associato alla MEN 2, non alla MEN 1." },
+            { id: 27, text: "Sede del carcinoide con il tasso più alto di sindrome da carcinoide", options: ["Retto", "Colon", "Appendice", "Diverticolo di Meckel", "Digiuno - ileo"], correct: 4, explanation: "I carcinoidi dell'intestino medio (digiuno, ileo, tenue) sono quelli che più frequentemente metastatizzano al fegato. La sindrome compare quasi esclusivamente quando ci sono metastasi epatiche (che bypassano il filtro epatico), quindi il tenue ha il tasso più alto associato alla sindrome." },
+            { id: 28, text: "La vena surrenalica destra confluisce in", options: ["Vena cava inferiore", "Vena renale destra", "Vene diaframmatiche", "Vena mesenterica superiore", "Nessuna delle precedenti"], correct: 0, explanation: "La vena surrenalica destra è molto corta e drena direttamente nella vena cava inferiore, rendendo la surrenalectomia destra tecnicamente delicata. La sinistra drena invece nella vena renale sinistra." },
+            { id: 29, text: "Le cellule del carcinoide derivano da", options: ["Cellule ossintiche", "Cellule enterocromaffini", "Cellule delta pancreatiche", "Cellule di un carcinoma", "Cellule di un adenocarcinoma"], correct: 1, explanation: "I tumori carcinoidi originano dalle cellule enterocromaffini (cellule di Kulchitsky) diffuse nel tratto gastrointestinale e polmonare, che fanno parte del sistema APUD/neuroendocrino." },
+            { id: 30, text: "I carcinoidi producono principalmente", options: ["Epinefrina", "Gastrina", "Somatostatina", "Serotonina", "Istamina"], correct: 3, explanation: "Sebbene possano produrre vari peptidi, il prodotto di secrezione di gran lunga più caratteristico e clinicamente rilevante (causa della sindrome da carcinoide) è la serotonina (5-HT)." },
+            { id: 31, text: "Le 3 sedi più frequenti di carcinoidi sono", options: ["Appendice, ileo, retto", "Pancreas, stomaco, duodeno", "Colon, diverticolo di Meckel, digiuno", "Esofago, stomaco, vie biliari", "Polmoni, appendice, vie biliari"], correct: 0, explanation: "Nel tratto gastrointestinale, la maggior parte dei carcinoidi si localizza in appendice, tenue (ileo) e retto." },
+            { id: 32, text: "La serotonina deriva metabolicamente da", options: ["Tirosina", "Leucina", "Isoleucina", "Triptofano", "Alanina"], correct: 3, explanation: "La serotonina (5-idrossitriptamina) è sintetizzata a partire dall'aminoacido essenziale triptofano. Un eccessivo consumo di triptofano da parte del tumore può causare carenza di niacina e portare a pellagra." },
+            { id: 33, text: "La serotonina è catabolizzata principalmente da", options: ["Rene", "Fegato", "Pancreas", "Intestino", "Cervello"], correct: 1, explanation: "La serotonina secreta nel circolo portale viene fisiologicamente inattivata (catabolizzata in 5-HIAA) dalle monoamino-ossidasi (MAO) nel fegato. Ecco perché la sindrome sistemica compare solo quando le metastasi epatiche riversano serotonina direttamente nelle vene sovraepatiche." },
+            { id: 34, text: "Il colore dei carcinoidi è", options: ["Rosso scuro", "Verde", "Giallo", "Nero", "Blu"], correct: 2, explanation: "Macroscopicamente, all'apertura della mucosa intestinale, i tumori carcinoidi appaiono tipicamente come piccoli noduli sottomucosi di colore giallo o giallo-grigiastro." },
+            { id: 35, text: "Il potenziale maligno dei carcinoidi dipende da", options: ["Sede", "Dimensioni", "Profondità di penetrazione nella parete", "Contenuto cellulare di DNA", "Tutte le precedenti"], correct: 4, explanation: "Il rischio di metastasi dipende dalla sede di origine (es. appendice è spesso benigna, ileo è più aggressivo), dalle dimensioni (>2 cm alto rischio), dall'infiltrazione della muscolare e dai marker di proliferazione." },
+            { id: 36, text: "Utile per la diagnosi di feocromocitoma", options: ["Tasso ematico di 5-OH triptamina", "Tasso di acido vanilmandelico urinario", "Tasso di 5-HIAA urinario", "Tasso ematico di calcitonina", "Nessuna delle precedenti"], correct: 1, explanation: "La diagnosi si fa dosando le catecolamine e i loro metaboliti. L'acido vanilmandelico (VMA) e le metanefrine nelle urine delle 24h sono i test standard." },
+            { id: 37, text: "Il feocromocitoma ectopico ha origine in", options: ["Ovaie", "Testicoli", "Vescica", "Fegato"], correct: 2, explanation: "I feocromocitomi extra-surrenalici sono chiamati paragangliomi. Una sede rara ma tipica (che causa ipertensione parossistica durante la minzione) è la parete della vescica urinaria." },
+            { id: 38, text: "Il precursore dell'epinefrina è", options: ["Triptofano", "Tirosina", "Leucina", "Alanina", "Isoleucina"], correct: 1, explanation: "La sintesi delle catecolamine segue la via: Tirosina -> DOPA -> Dopamina -> Norepinefrina -> Epinefrina." },
+            
+            { id: 39, text: "Cos'è la Pseudo-ZES (Sindrome di Zollinger-Ellison)?", options: ["Un adenoma ipofisario secernente ACTH", "Iperplasia delle cellule G", "Un tumore carcinoide del duodeno", "Iperplasia delle cellule D pancreatiche"], correct: 1, explanation: "La Pseudo-ZES è caratterizzata da un'iperplasia delle cellule G dell'antro gastrico che producono un eccesso di gastrina, simulando clinicamente la vera ZES (che è invece causata da un gastrinoma tumorale)." },
+            { id: 40, text: "Che cos'è l'Acido Vanilmandelico (VMA)?", options: ["Un metabolita della serotonina", "Un precursore della calcitonina", "Un metabolita delle catecolamine", "Un ormone steroideo"], correct: 2, explanation: "L'acido vanilmandelico è il prodotto finale del metabolismo delle catecolamine (epinefrina e norepinefrina) e viene dosato nelle urine per la diagnosi di feocromocitoma." },
+            { id: 41, text: "Dove drena anatomicamente la Vena Surrenalica Sinistra?", options: ["Direttamente nella vena cava inferiore", "Nella vena renale sinistra (spesso unendosi alla vena frenica inferiore)", "Nella vena mesenterica superiore", "Nella vena porta"], correct: 1, explanation: "A differenza della vena surrenalica destra che drena in modo brevissimo e diretto nella vena cava inferiore, la vena surrenalica sinistra è più lunga e drena nella vena renale sinistra, ricevendo spesso il sangue dalla vena frenica inferiore sinistra." },
+            { id: 42, text: "Qual è il principale metabolita della serotonina?", options: ["Acido vanilmandelico (VMA)", "Metanefrina", "5-HIAA (Acido 5-idrossiindolacetico)", "Dopamina"], correct: 2, explanation: "La serotonina viene catabolizzata dalle MAO in acido 5-idrossiindolacetico (5-HIAA), che viene misurato nelle urine delle 24 ore per diagnosticare i tumori carcinoidi." },
+            { id: 43, text: "Qual è la causa più frequente di ipercalcemia?", options: ["Ipertiroidismo", "Iperparatiroidismo", "Feocromocitoma", "Metastasi ossee litiche"], correct: 1, explanation: "Nella popolazione generale e ambulatoriale, l'iperparatiroidismo primario è la causa più comune di ipercalcemia. Nei pazienti ospedalizzati, l'ipercalcemia neoplastica è più frequente." },
+            { id: 44, text: "Come sono i livelli di calcio nell'iperparatiroidismo primario e terziario?", options: ["Ridotti (ipocalcemia)", "Aumentati (ipercalcemia)", "Normali", "Fluttuanti"], correct: 1, explanation: "Sia nel primario (adenoma autonomo) che nel terziario (iperplasia autonoma post-insufficienza renale prolungata), la secrezione sregolata di PTH causa ipercalcemia." },
+            { id: 45, text: "Qual è la classica triade sintomatologica del feocromocitoma?", options: ["Ipotensione, letargia, ipoglicemia", "Ipertensione, sudorazione, iperglicemia", "Esoftalmo, tachicardia, tremori", "Diarrea, vampate cutanee, asma"], correct: 1, explanation: "I sintomi derivano dall'eccesso di catecolamine simpatiche: ipertensione (spesso parossistica), sudorazione profusa, cefalea, palpitazioni, e un'azione controinsulare che porta a iperglicemia." },
+            { id: 46, text: "Quali sono i sintomi classici della sindrome da carcinoide (eccesso di serotonina)?", options: ["Ipertensione, cefalea, sudorazione", "Ulcere multiple, ipersecrezione acida, diarrea", "Diarrea, asma, eruzioni cutanee (flushing), valvulopatia", "Tetania, parestesie, convulsioni"], correct: 2, explanation: "Il rilascio di sostanze vasoattive (serotonina, istamina) causa vampate al volto (flushing), diarrea secretoria, broncospasmo (asma) e fibrosi del cuore destro (valvulopatia)." },
+            { id: 47, text: "Cosa causa la pellagra nei pazienti con sindrome da carcinoide severa?", options: ["Mancanza di vitamina B12", "Eccessiva distruzione dei globuli rossi", "Mancanza di triptofano (alterazione del metabolismo proteico)", "Eccesso di acido gastrico"], correct: 2, explanation: "Il tumore consuma massicce quantità di triptofano per sintetizzare serotonina, deprivando l'organismo di questo aminoacido necessario per la sintesi della Niacina (Vitamina B3), sfociando nella Pellagra (Dermatite, Diarrea, Demenza)." },
+            { id: 48, text: "Quali sono due effetti fisiologici dell'epinefrina?", options: ["Assorbimento di calcio renale e riduzione frequenza cardiaca", "Rilascio di glucosio, aumento della frequenza cardiaca", "Secrezione acida gastrica e vasodilatazione cutanea", "Aumento della motilità intestinale e broncocostrizione"], correct: 1, explanation: "L'epinefrina (adrenalina) è l'ormone del 'fight or flight': aumenta la gittata e frequenza cardiaca, e mobilita le riserve energetiche inducendo glicogenolisi (rilascio di glucosio)." },
+            { id: 49, text: "Come si chiama un tumore originato dalle cellule beta pancreatiche?", options: ["Glucagonoma", "Gastrinoma", "Vipoma", "Insulinoma"], correct: 3, explanation: "Le cellule beta delle Isole di Langerhans secernono insulina. Un loro tumore ipersecernente è l'insulinoma, che causa ipoglicemia a digiuno." },
+            { id: 50, text: "Cosa è necessario fare PRIMA o DURANTE la surrenalectomia per feocromocitoma?", options: ["Somministrare cortisolo a dosi massicce e chiudere la vena porta", "Chiudere la vena cava inferiore, somministrare alfa/beta bloccanti e sale", "Eseguire una termoablazione a radiofrequenza preventiva", "Nessuna preparazione farmacologica è necessaria"], correct: 1, explanation: "La gestione anestesiologica e chirurgica è vitale. Si pre-tratta il paziente con alfa-bloccanti, fluidi e sale per espandere il volume plasmatico e prevenire crisi ipertensive e successiva grave ipotensione. Chirurgicamente, bisogna controllare l'efflusso venoso per evitare massicce scariche catecolaminiche durante la manipolazione." },
+            { id: 51, text: "Qual è l'origine embriologica delle paratiroidi?", options: ["Inf: II tasca faringea. Sup: III tasca", "Inf: IV tasca faringea. Sup: III tasca", "Inf: III tasca faringea. Sup: IV tasca", "Derivano dalla fessura brachiale"], correct: 2, explanation: "Controintuitivamente, le paratiroidi INFERIORI derivano dalla TERZA tasca (e migrano giù con il timo), mentre le SUPERIORI derivano dalla QUARTA tasca faringea (e migrano poco, rimanendo più in alto)." },
+            { id: 52, text: "Cosa secernono i gastrinomi?", options: ["Glucagone", "Insulina", "Gastrina", "Somatostatina"], correct: 2, explanation: "I gastrinomi secernono autonomamente l'ormone gastrina, che iperstimola lo stomaco a produrre acido cloridrico." },
+            { id: 53, text: "Quale grave complicanza cardiaca cronica si sviluppa tipicamente nei pazienti con sindrome da carcinoide prolungata?", options: ["Endocardite infettiva della valvola mitrale", "Cardiomiopatia ipertrofica ventricolare sinistra", "Fibrosi e insufficienza delle valvole del cuore destro (es. tricuspide)", "Aneurisma dell'aorta ascendente"], correct: 2, explanation: "L'esposizione prolungata e non trattata ad alti livelli di serotonina circolante causa la deposizione di placche fibrotiche sull'endocardio e sulle valvole del cuore destro (valvola tricuspide e polmonare), portando alla tipica 'cardiopatia da carcinoide'." },
+            { id: 54, text: "Cosa causa la sindrome da carcinoide?", options: ["Ipersecrezione di insulina", "Ipersecrezione di gastrina", "Ipersecrezione di serotonina", "Ipersecrezione di catecolamine"], correct: 2, explanation: "L'ingresso massiccio di mediatori vasoattivi, primariamente la serotonina, nel circolo sistemico è la causa fisiopatologica della sindrome." },
+            { id: 55, text: "Quale colorazione istologica è tipica per le cellule cromaffini?", options: ["Argento", "Rosso Congo", "Cromo", "Ematossilina-Eosina pura"], correct: 2, explanation: "Le cellule della midollare surrenale (e dei paragangliomi) prendono il nome di 'cromaffini' perché il loro citoplasma contenente catecolamine si colora di scuro in presenza di sali di Cromo (reazione cromaffine)." },
+            { id: 56, text: "Quale colorazione istologica è usata storicamente per le cellule carcinoidi?", options: ["Cromo", "Argento", "Blu di Prussia", "PAS"], correct: 1, explanation: "Le cellule dei tumori neuroendocrini/carcinoidi hanno la capacità di ridurre i sali d'argento, da cui le classiche tecniche istochimiche argentaffini o argirofile." },
+            { id: 57, text: "Quando è stato scoperto il cortisolo per la prima volta?", options: ["1890", "1922", "1950", "1975"], correct: 2, explanation: "La scoperta e sintesi del cortisone e dell'idrocortisone (cortisolo) fruttò il Premio Nobel per la Medicina nel 1950 a Kendall, Reichstein e Hench." },
+            { id: 58, text: "Qual è l'incidenza stimata globale dei Tumori Neuroendocrini (NET)?", options: ["1 caso su 1.000.000 di persone ogni anno", "2-5 casi su 100.000 persone ogni anno", "50 casi su 100.000 persone ogni anno", "100 casi su 100.000 persone ogni anno"], correct: 1, explanation: "I NET sono tumori relativamente rari, con un'incidenza di circa 2-5 casi ogni 100.000 abitanti all'anno, anche se in aumento grazie a diagnosi migliori." },
+            { id: 59, text: "Qual è l'incidenza dei tumori carcinoidi?", options: ["1 caso su 100.000 persone ogni anno", "10 casi su 100.000 persone ogni anno", "1 caso su 1.000.000 di persone ogni anno", "50 casi su 100.000 persone ogni anno"], correct: 0, explanation: "Secondo il testo di riferimento originario, l'incidenza specifica dei classici carcinoidi si attesta su circa 1 caso ogni 100.000 persone all'anno." },
+            { id: 60, text: "Cosa producono le cellule alfa pancreatiche?", options: ["Insulina", "Glucagone", "Somatostatina", "Polipeptide pancreatico (PP)"], correct: 1, explanation: "Le cellule alfa secernono glucagone, ormone iperglicemizzante che agisce in antagonismo all'insulina prodotta dalle beta." },
+            { id: 61, text: "Da quale struttura origina il feocromocitoma?", options: ["Corticale del surrene", "Midollare del surrene (cellule cromaffini)", "Tiroide", "Paratiroidi"], correct: 1, explanation: "Il feocromocitoma è il tumore neuroendocrino che origina specificamente dalle cellule cromaffini della parte interna (midollare) del surrene." },
+            { id: 62, text: "Cosa secernono le cellule delta del pancreas?", options: ["Glucagone", "Insulina", "Gastrina", "Somatostatina"], correct: 3, explanation: "Le cellule delta secernono somatostatina, un potente ormone inibitorio universale che rallenta la motilità gastrointestinale e inibisce il rilascio di molti altri ormoni." },
+            { id: 63, text: "Il surrene possiede una ricca vascolarizzazione. In particolare, le arterie surrenaliche inferiori da quale vaso traggono tipicamente origine?", options: ["Dall'arteria mesenterica superiore", "Dall'arteria renale omolaterale", "Direttamente dal tronco celiaco", "Dall'arteria iliaca comune"], correct: 1, explanation: "Il surrene è irrorato da tre gruppi arteriosi: le superiori (dalle arterie freniche inferiori), le medie (dall'aorta addominale) e le inferiori (che nascono tipicamente dall'arteria renale corrispondente)." },
+            { id: 64, text: "Quali sono le funzioni del Paratormone (PTH)?", options: ["Abbassa il calcio depositandolo nelle ossa", "Agisce sulla vit. D3 per l'assorbimento intestinale, stimola gli osteoclasti, migliora riassorbimento di calcio nel rene", "Inibisce l'assorbimento renale di calcio e stimola gli osteoblasti", "Nessuna delle precedenti"], correct: 1, explanation: "Il PTH alza la calcemia in 3 modi: 1) attiva la vitamina D nel rene, 2) riassorbe calcio dall'osso via osteoclasti, 3) recupera calcio e magnesio dall'urina nel tubulo contorto distale." },
+            { id: 65, text: "Sede più tipica delle metastasi da carcinoidi", options: ["Ossa e cervello", "Linfonodi ascellari", "Fegato, polmoni", "Rene e milza"], correct: 2, explanation: "Avendo origine frequente dal tratto GI, il drenaggio venoso portale trasporta le cellule metastatiche prima di tutto al Fegato. I carcinoidi polmonari o rettali possono metastatizzare direttamente ai Polmoni." },
+            { id: 66, text: "Quale NON è una causa di iperparatiroidismo primario?", options: ["Adenoma singolo", "Iperplasia ghiandolare", "Carcinoma paratiroideo", "Linfoma"], correct: 3, explanation: "Il linfoma non fa parte dell'eziologia dell'iperparatiroidismo primario. Quest'ultimo è una patologia proliferativa intrinseca del parenchima paratiroideo (adenoma 80%, iperplasia, carcinoma)." },
+            { id: 67, text: "Nella Sindrome di Zollinger-Ellison (ZES), l'eccesso di gastrina su quali cellule agisce per causare il quadro clinico?", options: ["Sulle cellule G dell'antro gastrico", "Sulle cellule alfa delle isole pancreatiche", "Sulle cellule ossintiche (parietali) dello stomaco", "Sulle cellule mucipare del duodeno"], correct: 2, explanation: "Il gastrinoma produce massicce quantità di gastrina che, viaggiando nel torrente ematico, va a iperstimolare i recettori CCK-B sulle cellule parietali (ossintiche) situate nel fondo e nel corpo dello stomaco, provocando un'ipersecrezione acida refrattaria." },
+            { id: 68, text: "Quali di queste cellule derivano dalla cresta neurale?", options: ["Solo gli epatociti", "Cellule muscolari striate", "Cellule cromaffini, melanociti, cartilagine cranio-facciale, glia periferica ed enterica", "Solo gli eritrociti"], correct: 2, explanation: "La cresta neurale embriologica è una struttura transitoria che dà origine a una vasta gamma di cellule, incluso tutto il sistema neuroendocrino diffuso, midollare surrenalica e sistema nervoso autonomo." },
+            { id: 69, text: "Cos'è la Sindrome MEN 1 (Sindrome di Wermer)?", options: ["Associa midollare tiroide e feocromocitoma", "Sviluppo di lesioni neoplastiche nell'ipofisi, paratiroidi e pancreas", "Malattia autoimmune della tiroide", "Sindrome che causa ipocalcemia severa"], correct: 1, explanation: "La MEN 1 (Mutazione Menina) colpisce le 3 P: Pituitary (Ipofisi), Paratiroidi (iperparatiroidismo è quasi costante), e Pancreas endocrino (Gastrinomi, Insulinomi)." },
+            { id: 70, text: "Quali patologie sono associate alla Sindrome MEN 2?", options: ["Adenomi ipofisari e gastrinomi", "Carcinoma papillare della tiroide e linfomi", "Carcinoma midollare della tiroide, feocromocitoma, e (nella 2A) iperparatiroidismo", "Solo carcinoidi intestinali multipli"], correct: 2, explanation: "MEN 2 (mutazione gene RET) prevede sempre il Carcinoma Midollare della Tiroide (100%), spesso Feocromocitoma (50%), associato a iperparatiroidismo (MEN 2A) o a ganglioneuromatosi/habitus marfanoide (MEN 2B)." },
+            { id: 71, text: "Qual è l'incidenza dei paragangliomi?", options: ["10 casi su 100.000 persone ogni anno", "1-2 casi su 100.000 persone ogni anno", "0.1 casi su 100.000 persone ogni anno", "20 casi su 100.000 persone ogni anno"], correct: 1, explanation: "I paragangliomi (feocromocitomi extra-surrenalici lungo i gangli simpatici o parasimpatici) sono rari, stimati in 1-2 casi per 100.000 abitanti." },
+            { id: 72, text: "In che percentuale il feocromocitoma è maligno?", options: ["10% dei casi", "50% dei casi", "90% dei casi", "0% (sempre benigno)"], correct: 0, explanation: "Il feocromocitoma è famoso per la 'regola del 10': 10% extra-surrenalico, 10% bilaterale, 10% familiare, 10% pediatrico e 10% maligno (definito dalla presenza di metastasi)." },
+            { id: 73, text: "Quali vene formano principalmente la vena porta?", options: ["Vena cava inferiore, vene epatiche di destra e sinistra, e i rami provenienti dalle vene renali", "Vena iliaca comune destra e sinistra, in confluenza con la vena sacrale mediana e le vene lombari", "Vena mesenterica superiore unita alla vena splenica (che accoglie l'inferiore), vene gastriche e cistiche", "Vena mesenterica inferiore unita direttamente alla vena cava inferiore, insieme alle vene polmonari"], correct: 2, explanation: "Il tronco della vena porta si forma dietro il collo del pancreas dalla confluenza della Vena Mesenterica Superiore e del Tronco Spleno-Mesenterico (Vena Splenica unita alla Vena Mesenterica Inferiore)." },
+            { id: 74, text: "Quali sono i prodotti della corticale del surrene?", options: ["Catecolamine", "Androgeni, glucocorticoidi, mineralcorticoidi", "Insulina e Glucagone", "Calcitonina e PTH"], correct: 1, explanation: "Ricorda la mnemotecnica: 'Sale, Zucchero, Sesso'. Glomerulare = Mineralcorticoidi (Aldosterone per il sale), Fascicolata = Glucocorticoidi (Cortisolo per zuccheri), Reticolare = Androgeni (DHEA per caratteri sessuali)." },
+            { id: 75, text: "Qual è l'incidenza del paraganglioma aortico (Organo di Zuckerkandl)?", options: ["10 casi su 100.000 persone ogni anno", "1 caso su 100.000 persone ogni anno", "1 caso su 1.000.000 di persone ogni anno", "Nessuna delle precedenti"], correct: 1, explanation: "Il paraganglioma aortico, localizzato alla biforcazione dell'aorta (Organo di Zuckerkandl), è il paraganglioma addominale più frequente ma resta raro, con un'incidenza di circa 1:100.000." },
+            
+            { id: 76, text: "Quale dei seguenti elenchi rappresenta in modo più completo la sintomatologia del feocromocitoma?", options: ["Ipotensione, diarrea, letargia, bradicardia", "Ipertensione, sudorazione, costipazione, sintomi psichici, tachicardia, iperglicemia", "Asma, flushing cutaneo, valvulopatia destra, pellagra", "Obesità centripeta, strie rubre, astenia, irsutismo"], correct: 1, explanation: "Oltre alla classica triade (ipertensione, sudorazione, tachicardia), l'eccesso di catecolamine riduce la motilità intestinale (costipazione), altera il metabolismo glucidico (iperglicemia) e può causare gravi stati d'ansia o alterazioni dell'umore (sintomi psichici)." },
+            { id: 77, text: "Dal punto di vista fisiopatologico, cosa è strettamente necessario affinché un carcinoide del tratto gastrointestinale provochi la \"sindrome da carcinoide\" sistemica?", options: ["Che il tumore infiltri la muscolaris mucosae", "La presenza di metastasi polmonari", "Un'insufficienza epatica o metastasi epatiche che bypassino il fegato", "La secrezione concomitante di gastrina"], correct: 2, explanation: "Il fegato sano metabolizza rapidamente la serotonina prodotta nell'intestino grazie alle MAO. La sindrome ormonale sistemica si manifesta solo quando questo filtro viene bypassato dalle metastasi epatiche (che rilasciano l'ormone direttamente nelle vene sovraepatiche) o in caso di insufficienza epatica." },
+            { id: 78, text: "Qual è il sito principale di ectopia per le ghiandole paratiroidi inferiori?", options: ["Lobo epatico destro", "Nel timo o nel mediastino anteriore", "Alla base della lingua", "Nella ghiandola sottomandibolare"], correct: 1, explanation: "Le paratiroidi inferiori derivano dalla III tasca faringea e migrano in basso insieme al timo. Possono fermarsi lungo il tragitto cervicale inferiore o finire ectopicamente nel mediastino anteriore (spesso all'interno del corno timico)." },
+            { id: 79, text: "Di quali molecole specifiche l'Acido Vanilmandelico (VMA) è il principale metabolita finale?", options: ["Serotonina e Istamina", "Calcitonina e Paratormone", "Noradrenalina e Adrenalina", "Acetilcolina e Dopamina"], correct: 2, explanation: "L'acido vanilmandelico (VMA) è il prodotto terminale della via catabolica delle catecolamine (noradrenalina e adrenalina), degradate dagli enzimi COMT e MAO." },
+            { id: 80, text: "Come viene escreto dal corpo l'acido vanilmandelico (VMA) a fini di misurazione diagnostica?", options: ["Attraverso la bile nelle feci", "Con la sudorazione e la saliva", "Tramite l'espirazione polmonare", "Principalmente con le urine"], correct: 3, explanation: "Il VMA, essendo un metabolita idrosolubile inerte, viene filtrato dai reni ed escreto. Per diagnosticare un feocromocitoma si valuta la sua concentrazione mediante la raccolta delle urine delle 24 ore." },
+            { id: 81, text: "Qual è la prevalenza stimata del tumore carcinoide secondo alcuni dati epidemiologici di riferimento?", options: ["20 casi su 100.000 persone", "2 casi su 100.000 persone", "1 caso su 1.000.000 di persone", "50 casi su 100.000 persone"], correct: 1, explanation: "Il carcinoide è una patologia neoplastica rara; sebbene ci siano lievi discrepanze nei testi tra incidenza e prevalenza globale, dati specifici riportano una prevalenza media di circa 2 casi su 100.000 abitanti." },
+            { id: 82, text: "In quale contesto clinico-genetico è possibile riscontrare frequentemente l'associazione tra un tumore carcinoide (es. timico, bronchiale) e un quadro di iperparatiroidismo?", options: ["Sindrome MEN 1 (Sindrome di Wermer)", "Sindrome MEN 2A (Sindrome di Sipple)", "Sindrome di Zollinger-Ellison isolata", "Malattia di Cushing"], correct: 0, explanation: "La MEN 1, oltre a colpire Paratiroidi, Pancreas e Ipofisi (le 3 P), si associa con frequenza aumentata a tumori carcinoidi del tratto foregut (timo, bronchi, stomaco). Esiste anche la rara secrezione paraneoplastica di PTH-rP da parte dei carcinoidi." },
+            { id: 83, text: "Qual è la percentuale di incidenza epidemiologica annuale dei tumori neuroendocrini (NET) nel loro complesso?", options: ["0.5 casi per 100.000 persone ogni anno", "2-3 casi per 100.000 persone ogni anno", "10-15 casi per 100.000 persone ogni anno", "Più di 50 casi per 100.000 persone ogni anno"], correct: 1, explanation: "I tumori neuroendocrini (NET) sono considerati rari, con un'incidenza annua globale stimata attorno ai 2-3 casi per 100.000 persone all'anno, comprendendo tutte le localizzazioni gastroenteropancreatiche (GEP) e polmonari." },
+            { id: 84, text: "Sindrome da carcinoide, quale di questi è un sintomo clinico primario?", options: ["Stipsi severa", "Diarrea", "Ritenzione urinaria", "Ipotensione ortostatica"], correct: 1, explanation: "La diarrea secretoria è uno dei sintomi più frequenti e debilitanti della sindrome da carcinoide, causata dall'eccesso di serotonina che stimola la motilità e la secrezione intestinale." },
+            { id: 85, text: "Da cosa è causata l'ipercalcemia nell'IPTP (Iperparatiroidismo Primario)?", options: ["Solo da adenoma", "Solo da carcinoma", "Solo da iperplasia", "Adenoma, carcinoma, iperplasia, tutte le precedenti"], correct: 3, explanation: "L'iperparatiroidismo primario (IPTP) può essere causato da un adenoma singolo (più frequente), iperplasia di più ghiandole, o raramente da un carcinoma paratiroideo." },
+            { id: 86, text: "Cosa è incluso all'interno del triangolo del gastrinoma?", options: ["Coda del pancreas", "Testa del pancreas", "Milza", "Fegato"], correct: 1, explanation: "Il triangolo del gastrinoma (o di Passaro) comprende la confluenza biliare, il duodeno e il collo/corpo del pancreas, includendo al interno la testa del pancreas, sede frequente di queste neoplasie." },
+            { id: 87, text: "Qual è uno degli effetti metabolici diretti dell'adrenalina?", options: ["Smobilita le riserve di glucosio", "Promuove la sintesi di glicogeno", "Riduce la frequenza cardiaca", "Stimola la secrezione di insulina"], correct: 0, explanation: "L'adrenalina (o epinefrina) prepara il corpo alla reazione 'fight or flight', smobilitando le riserve di glucosio (glicogenolisi) per fornire energia immediata ai muscoli e al cervello." },
+            { id: 88, text: "Cosa è solitamente necessario perché la sindrome da carcinoide diventi sintomatica a livello sistemico?", options: ["Ulcera gastrica perforata", "Insufficienza epatica (o metastasi epatiche)", "Metastasi cerebrali", "Ostruzione intestinale"], correct: 1, explanation: "Affinché i mediatori vasoattivi come la serotonina raggiungano il circolo sistemico senza essere inattivati, è necessaria la presenza di metastasi epatiche (che bypassano il filtro del fegato) o un grave stato di insufficienza epatica." },
+            { id: 89, text: "Qual è il sito di ectopia principale in cui è possibile ritrovare una paratiroide inferiore?", options: ["Muscolo sternocleidomastoideo", "Timo", "Lobo epatico", "Esofago"], correct: 1, explanation: "Le paratiroidi inferiori condividono l'origine embriologica (terza tasca faringea) con il timo e migrano con esso, potendo rimanere intrappolate nel mediastino o all'interno del timo stesso." },
+            { id: 90, text: "Cosa stimola direttamente la gastrina?", options: ["Secrezione di insulina", "Secrezione di glucagone", "Secrezione di bile", "Secrezione di HCl (acido cloridrico)"], correct: 3, explanation: "La gastrina agisce sulle cellule parietali (ossintiche) dello stomaco, stimolandole potentemente a produrre e secernere acido cloridrico (HCl)." },
+            { id: 91, text: "Quali sono manifestazioni cliniche tipiche della sindrome di Zollinger Ellison?", options: ["Diarrea da malassorbimento e ulcere gastriche/peptiche", "Stipsi e calcoli biliari", "Iperglicemia e obesità", "Ipotensione e bradicardia"], correct: 0, explanation: "L'eccesso di acido cloridrico non solo causa ulcere gastriche e duodenali refrattarie, ma inattiva anche gli enzimi pancreatici, portando a maldigestione e diarrea da malassorbimento." },
+            { id: 92, text: "Dove drena la vena surrenalica destra rispetto a quella sinistra?", options: ["Direttamente nella vena cava inferiore", "Nella vena renale destra", "Nella vena porta", "Nella vena mesenterica superiore"], correct: 0, explanation: "La vena surrenalica destra è cortissima e sfocia direttamente nella vena cava inferiore, mentre la sinistra drena nella vena renale sinistra. Questo rende la surrenectomia destra più rischiosa." },
+            { id: 93, text: "Se si esegue una surrenectomia per feocromocitoma, qual è il primo passo cruciale chirurgico appena iniziato l'intervento?", options: ["Asportare prima i linfonodi", "Chiudere la vena per evitare che gli ormoni vadano in giro (in circolo)", "Tagliare l'arteria surrenalica", "Palpare energicamente la ghiandola"], correct: 1, explanation: "Il primo step essenziale è legare e chiudere la vena surrenalica centrale prima di manipolare il tumore, per impedire una massiccia immissione di catecolamine nel torrente ematico che causerebbe crisi ipertensive fatali." },
+            { id: 94, text: "L'acido vanilmandelico (VMA) è il principale metabolita di quale molecola in particolare?", options: ["Serotonina", "Noradrenalina (e adrenalina)", "Cortisolo", "Insulina"], correct: 1, explanation: "Il VMA è il prodotto di degradazione finale delle catecolamine, in particolare noradrenalina e adrenalina, utile per la diagnosi di feocromocitoma." },
+            { id: 95, text: "Qual è la percentuale epidemiologica (incidenza) dei tumori neuroendocrini (NET) riportata a lezione?", options: ["10-15 casi per 100.000 persone ogni anno", "0.5 casi per 100.000 persone ogni anno", "2-3 casi per 100.000 persone ogni anno", "50 casi per 100.000 persone ogni anno"], correct: 2, explanation: "Come riportato dalle sbobine di riferimento, i tumori neuroendocrini hanno un'incidenza di circa 2-3 nuovi casi per 100.000 persone ogni anno." },
+            { id: 96, text: "Riguardo all'embriologia delle paratiroidi, da dove derivano?", options: ["III tasca faringea le superiori, IV tasca le inferiori", "III tasca faringea le inferiori, IV tasca le superiori", "Entrambe dalla II tasca faringea", "Dal dotto tireoglosso"], correct: 1, explanation: "Le paratiroidi inferiori derivano dalla III tasca faringea (e migrano più in basso col timo), mentre le superiori derivano dalla IV tasca faringea." },
+            { id: 97, text: "Quale organo è responsabile in prima linea della metabolizzazione della serotonina secreta dall'intestino?", options: ["Rene", "Polmone", "Fegato", "Milza"], correct: 2, explanation: "La serotonina escreta dall'intestino finisce nel circolo portale e viene quasi interamente metabolizzata dalle monoamino-ossidasi (MAO) nel fegato." },
+            { id: 98, text: "Quali sono i vasi principali responsabili della formazione della vena porta?", options: ["Vena cava inferiore e vene epatiche, insieme al drenaggio venoso proveniente dalle vene renali e surrenaliche", "Vena mesenterica superiore, in confluenza con la vena splenica, unita al drenaggio delle vene gastriche e cistiche", "Vene iliache comuni e vene renali bilaterali, in unione al plesso venoso pelvico che drena nella circolazione sistemica", "Vena mesenterica inferiore in confluenza diretta con la vena cava inferiore, e le vene genitali (ovariche o testicolari)"], correct: 1, explanation: "La vena porta si forma tipicamente dalla confluenza della vena mesenterica superiore con la vena splenica (che a sua volta ha spesso già ricevuto la mesenterica inferiore). Riceve anche vene gastriche e cistiche." },
+            { id: 99, text: "Come viene escreto dal corpo l'acido vanilmandelico per poter essere misurato a fini diagnostici?", options: ["Con la bile", "Con il sudore", "È escreto con le urine", "Tramite le feci"], correct: 2, explanation: "Il VMA è un metabolita idrosolubile che viene filtrato ed escreto con le urine, dove viene comunemente dosato (raccolta delle 24 ore)." },
+            { id: 100, text: "A cosa è dovuta la colorazione storicamente usata per le cellule 'cromaffini'?", options: ["Argento", "Cromo", "Ferro", "Rame"], correct: 1, explanation: "Le cellule della midollare del surrene vengono definite cromaffini perché assumono una colorazione scura quando esposte a sali di cromo." },
+            { id: 101, text: "I tumori carcinoidi classici mostrano affinità istologica per quale elemento chimico?", options: ["Argento", "Cromo", "Zinco", "Piombo"], correct: 0, explanation: "Le cellule dei carcinoidi sono note per le loro proprietà argentaffini e argirofile, legando i sali d'argento nelle preparazioni istologiche." },
+            { id: 102, text: "Cosa producono le cellule Alfa del pancreas?", options: ["Insulina", "Somatostatina", "Glucagone", "Polipeptide Pancreatico"], correct: 2, explanation: "Le cellule Alfa delle isole di Langerhans secernono glucagone, ormone iperglicemizzante." },
+            
+            { id: 103, text: "Qual è il livello linfonodale più importante per la tiroide?", options: ["Livello I", "Livello II", "Livello III", "Livello VI (compartimento centrale)"], correct: 3, explanation: "Il compartimento centrale (livello VI) è la prima sede di metastasi del carcinoma papillare della tiroide e include i linfonodi pretracheali, paratracheali e prelaringei." },
+            { id: 104, text: "Un referto citologico TIR5 (THY5) su un nodulo tiroideo richiede tipicamente:", options: ["Follow-up ecografico a 6 mesi", "Lobectomia diagnostica", "Tiroidectomia totale", "Agoaspirato ripetuto"], correct: 2, explanation: "TIR5 indica un'altissima probabilità di patologia maligna (carcinoma tiroideo) e dà indicazione chirurgica netta per la tiroidectomia totale, con eventuale linfadenectomia se indicata." },
+            { id: 105, text: "Qual è la sede anatomica più frequente dei gastrinomi (Sindrome di Zollinger-Ellison) tra quelle elencate?", options: ["Corpo gastrico", "Fegato", "Duodeno", "Retto"], correct: 2, explanation: "Il 70-80% dei gastrinomi si localizza all'interno del cosiddetto 'gastrinoma triangle', che comprende la prima/seconda porzione del duodeno, la testa del pancreas e le zone limitrofe." },
+            { id: 106, text: "Qual è il farmaco di prima linea indispensabile per evitare crisi ipertensive intraoperatorie in caso di feocromocitoma?", options: ["Beta-bloccanti in monoterapia", "Calcio-antagonisti", "Alfa-bloccanti", "Dopamina"], correct: 2, explanation: "Il trattamento preparatorio fondamentale consiste nell'alfa-blocco per stabilizzare la pressione prevenendo il vasospasmo periferico. Solo successivamente si aggiunge il beta-blocco per controllare la tachicardia. Mai usare prima il beta-blocco: scatenerebbe grave crisi ipertensiva." },
+            { id: 107, text: "Qual è la sede più frequente dei Tumori Neuroendocrini (NET) del foregut?", options: ["Stomaco", "Duodeno", "Pancreas", "Polmoni"], correct: 3, explanation: "NOTA: le sbobine sono molto vaghe, ma sia nelle 23-24 che nelle 24-25 c’è espressamente scritto che tra quelli del foregut (intestino esterno formato da polmoni, timo, stomaco, duodeno e pancreas) i polmoni sarebbero quelli più frequenti. Invece se si parla di GI-NET, del tratto gastrointestinale, le percentuali diventano: piccolo intestino/intestino tenue(45%), retto(20%), appendice(17%), colon(11%),stomaco(7%)" },
+            { id: 108, text: "Quali ghiandole paratiroidi risultano in genere meno variabili nella loro posizione anatomica?", options: ["Le paratiroidi superiori", "Le paratiroidi inferiori", "Le paratiroidi di sinistra", "Le paratiroidi di destra"], correct: 0, explanation: "Le paratiroidi inferiori, derivando dalla III tasca branchiale e migrando verso il basso col timo, hanno una posizione molto variabile (fino al mediastino). Le superiori (IV tasca) sono molto più costanti, situate posteriorly al terzo superiore della tiroide." },
+            { id: 109, text: "A partire da quali valori sierici l'ipercalcemia può innescare una crisi ipercalcemica acuta e pericolosa?", options: ["10 mg/dl", "11 mg/dl", "12 mg/dl", ">14 mg/dl"], correct: 3, explanation: "La crisi ipercalcemica si manifesta clinicamente come una vera urgenza medica quando i livelli di calcio sierico superano o eguagliano i 14 mg/dl." },
+            { id: 110, text: "In quale delle seguenti sindromi ereditarie è tipico poter trovare un gastrinoma?", options: ["Sindrome MEN 1", "Sindrome MEN 2A", "Sindrome MEN 2B", "Sindrome MEN 4"], correct: 0, explanation: "La MEN 1 (Sindrome di Wermer) è caratterizzata dalla presenza di neoplasie o iperplasie in '3 P': Paratiroidi (iperparatiroidismo), Pituitary (ipofisi) e Pancreas endocrino (ove i gastrinomi e insulinomi sono molto frequenti)." },
+            { id: 111, text: "La mutazione attivante del proto-oncogene RET è caratteristica di:", options: ["Carcinoma papillare", "Carcinoma follicolare", "Carcinoma midollare della tiroide", "Adenoma di Plummer"], correct: 2, explanation: "Il Carcinoma Midollare della Tiroide (CMT), sia nelle varianti familiari (sindromi MEN2) che in molte forme sporadiche, è strettamente legato alle mutazioni del gene RET." },
+            { id: 112, text: "Quali tra i seguenti accessi vengono utilizzati nella chirurgia tiroidea mini-invasiva (MIVAT e approcci remoti)?", options: ["Accesso Transorale (TOETVA)", "Accesso Ascellare", "Accesso Retroauricolare", "Tutti gli approcci elencati"], correct: 3, explanation: "Le moderne tecniche di chirurgia tiroidea remota e minimamente invasiva comprendono tutte queste opzioni: l'accesso transorale vestibolare (TOETVA), quello ascellare e quello retroauricolare (spesso eseguito con ausilio robotico)." },
+            { id: 113, text: "Dopo un intervento di tiroidectomia totale, cosa è strettamente necessario somministrare al paziente?", options: ["Calcitonina", "Paratormone sintetico", "Levotiroxina (LT4)", "Nessuna terapia se i livelli di TSH restano bassi"], correct: 2, explanation: "L'asportazione totale della ghiandola tiroidea priva permanentemente l'organismo della sua fonte endogena di ormoni tiroidei; il paziente necessita di una terapia ormonale sostitutiva a vita con Levotiroxina (LT4)." },
+            { id: 114, text: "Quale delle seguenti neoplasie NON fa tipicamente parte dello spettro clinico della sindrome MEN2?", options: ["Adenoma ipofisario", "Carcinoma midollare della tiroide", "Iperparatiroidismo primario", "Feocromocitoma"], correct: 0, explanation: "L'adenoma ipofisario è uno dei tratti patognomonici della MEN 1 (insieme a patologie paratiroidee e pancreatiche). Nelle sindromi MEN2 (A e B) si ritrovano invece costantemente il Carcinoma Midollare e spesso il Feocromocitoma." },
+            { id: 115, text: "Che cos'è anatomicamente il legamento di Berry in ambito tiroideo?", options: ["Un legamento che fissa il pancreas posteriorly", "Il legamento che fissa il surrene al polo renale", "Il legamento sospensore posteriore della tiroide", "Un residuo fibroso del dotto tireoglosso"], correct: 2, explanation: "Il legamento di Berry (legamento sospensore posteriore) fissa fermamente i lobi della tiroide alla trachea posteriore. È un punto chirurgicamente molto delicato poiché vi entra in stretto contatto il nervo laringeo ricorrente." },
+            { id: 116, text: "Qual è l'action chirurgica maggiormente raccomandata di fronte a un nodulo tiroideo con referto THY4/TIR4 all'agoaspirato?", options: ["Follow-up ogni 3 mesi", "Enucleoresezione", "Tiroidectomia totale", "Radioterapia locale"], correct: 2, explanation: "La categoria citologica THY4/TIR4 indica un forte sospetto di neoplasia maligna. Seguendo le linee guida correnti, specie per noduli di dimensioni rilevanti, la scelta terapeutica d'elezione è solitamente la tiroidectomia totale." },
+            { id: 117, text: "Quale dei seguenti tumori tiroidei vanta, di norma, la sopravvivenza migliore e la prognosi più favorevole?", options: ["Carcinoma Papillare", "Carcinoma Follicolare", "Carcinoma Anaplastico", "Carcinoma a cellule di Hürthle"], correct: 0, explanation: "Il carcinoma papillare non solo rappresenta la forma di tumore tiroideo largamente più frequente, ma è anche il più indolente, vantando tassi di sopravvivenza che eccedono il 95% a 10 anni." },
+            { id: 118, text: "Un iperparatiroidismo primario definito 'persistente' (che permane immediatamente dopo la prima chirurgia) a cosa è quasi sempre imputabile?", options: ["A un errore tecnico o mancata asportazione della ghiandola malata", "A una recidiva biologica della malattia ad anni di distanza", "A un secondo adenoma improvviso", "A una conversione maligna fulminea"], correct: 0, explanation: "Si parla di iperparatiroidismo 'persistente' quando la calcemia non si normalizza mai nel periodo post-operatorio. La causa di gran lunga più probabile è un errore chirurgico/tecnico, in cui la ghiandola patologica (spesso ectopica) non è stata né identificata né rimossa." },
+            { id: 119, text: "In caso di un gozzo retrosternale o cervico-mediastinico che si estende profondamente con grande volume, quale procedura chirurgica aggiuntiva può rendersi necessaria?", options: ["Dissezione linfonodale cervicale preventiva", "Sternotomia mediana", "Sezione ampia dello sternocleidomastoideo", "Solo l'intubazione prolungata post-operatoria"], correct: 1, explanation: "Sebbene la maggioranza dei gozzi immersi possa essere dislocata ed estratta per via cervicale, in casi di volumi estremi nel mediastino o forti aderenze, il chirurgo può dover ricorrere a un accesso sternotomico per lavorare in sicurezza." },
+            { id: 120, text: "Cosa si raccomanda di fare in presenza di un reperto TIR1 (citologia non diagnostica), ma in un contesto di ecografia fortemente sospetta e nodulo singolo >1 cm?", options: ["Rivalutazione ecografica annua", "Ripetere l'agoaspirato all'infinito senza agire", "Lobectomia diagnostica", "Tiroidectomia totale preventiva immediata"], correct: 2, explanation: "Mentre un esito TIR1 puro suggerisce di ripetere l'agoaspirato, se i reperti ecografici sono francamente sospetti (microcalcificazioni, margini irregolari) e il nodulo è clinicamente significativo, l'indicazione appropriata diviene l'asportazione chirurgica della metà tiroidea (lobectomia diagnostica)." },
+            { id: 121, text: "In base alle linee guida di settore (es. Japan Association), qual è il primo e più dirimente step se sorge il sospetto di un carcinoma midollare in caso di un nodulo tiroideo?", options: ["Counseling genetico immediato a tappeto", "Lobectomia d'urgenza in anestesia locale", "Biopsia preventiva del linfonodo sentinella", "Dosaggio mirato della calcitonina"], correct: 0, explanation: "Il counseling genetico è il primo passo raccomandato perché circa un quarto dei carcinomi midollari della tiroide è ereditario e legato a una mutazione del gene RET, e conoscerla prima dell'operazione è vitale per la tua sicurezza e per la scelta del tipo di chirurgia." },
+            { id: 122, text: "Qual è la strategia chirurgica di riferimento e preferita per trattare un'iperplasia multighiandolare paratiroidea (es. in pazienti con familiarità o MEN1)?", options: ["Asportazione dell'unica ghiandola visibilmente ingrandita", "Somministrazione esclusiva di calciomimetici e vitamina D", "Paratiroidectomia subtotale o totale con autotrapianto muscolare", "Ablazione non chirurgica con radioiodio 131"], correct: 2, explanation: "Nelle iperplasie genetiche/multighiandolari il difetto è sistemico e colpisce tutte le ghiandole. Si procede quindi all'asportazione quasi totale (lasciando in sede solo 50 mg di tessuto ben vascolarizzato) oppure alla tiroidectomia totale seguita dall'autotrapianto nel muscolo di un braccio, evitando così recidive nel collo." },
+            { id: 123, text: "Quale trattamento chirurgico è raccomandato per un NET gastrico di Tipo 3?", options: ["Semplice resezione endoscopica mucosa", "Antrectomia senza dissezione", "Gastrectomia parziale senza prelievo di linfonodi", "Gastrectomia parziale o totale associata a un'adeguata linfoadenectomia"], correct: 3, explanation: "I NET gastrici di Tipo 3 sono forme sporadiche, di norma solitarie, grosse e con potenziale metastatico e aggressivo elevato. Il loro trattamento ricalca quello oncologico radicale dell'adenocarcinoma gastrico." },
+            { id: 124, text: "Confrontando un Tumore Neuroendocrino Pancreatico (PNET) con un tumore esocrino (adenocarcinoma duttale pancreatico), quale affermazione è corretta?", options: ["L'adenocarcinoma duttale presenta una prognosi nettamente migliore", "I PNET godono tendenzialmente di una prognosi clinica più favorevole a lungo termine", "Hanno la medesima esatta incidenza annua", "Nessuno dei due è mai associato a sindromi ereditarie"], correct: 1, explanation: "Nonostante varino in base a stadio e grading, globalmente i tumori neuroendocrini del pancreas (PNET) presentano una storia naturale molto più indolente e una sopravvivenza di gran lunga migliore rispetto al letale adenocarcinoma esocrino." },
+            { id: 125, text: "Durante un intervento di surrenalectomia destra, quale viene universalmente considerata la manovra o fase più critica dell'operazione?", options: ["Il reperimento del surrene nel grasso peri-renale", "La separazione della ghiandola dal polo renale superiore", "L'identificazione, chiusura sicura e successiva sezione della vena surrenalica destra", "Il delicato scostamento del lobo epatico destro"], correct: 2, explanation: "La vena surrenalica destra è proverbialmente cortissima e insidiosa, sboccando direttamente e a piombo nella grande Vena Cava Inferiore. Errori in questa fase possono causare repentine emorragie retroperitoneali difficilmente controllabili." },
+            { id: 126, text: "Tra le patologie di pertinenza dell'endocrino-chirurgia, quale di queste neoplasie detiene il triste primato per essere la più letale (peggior sopravvivenza a 5 anni)?", options: ["Carcinoma midollare della tiroide", "Carcinoma corticosurrenalico", "Carcinoma paratiroideo", "NET di basso grado dell'appendice"], correct: 1, explanation: "Il carcinoma adrenocorticale (della corteccia surrenalica) è per fortuna una neoplasia molto rara, ma si dimostra biologicamente infausta, manifestandosi spesso già in stadio avanzato con un'elevatissima propensione alla recidiva e alla metastatizzazione." },
+            { id: 127, text: "In quale specifico contesto procedurale il dosaggio intraoperatorio rapido del PTH (Paratormone) risulta essenziale?", options: ["Durante la paratiroidectomia mini-invasiva mirata (MIP)", "Nel corso di tiroidectomie per gozzi tiroidei tossici", "In ogni surrenalectomia per feocromocitoma", "Durante la linfadenectomia per neoplasie pancreatiche"], correct: 0, explanation: "Nella paratiroidectomia focalizzata mini-invasiva per singolo adenoma, il dosaggio del PTH (prelievi rapidi al tempo zero e dopo 10-15 minuti dall'escissione) garantisce, grazie a un dimezzamento dei valori, di aver estratto con successo l'unica ghiandola ipersecernente." },
+            { id: 128, text: "Quale di questi reperti rientra tra le manifestazioni cliniche classiche dell'iperparatiroidismo primario sintomatico?", options: ["Nefrocalcinosi ostruttiva", "Fratture ossee patologiche e indebolimento", "Sintomi aspecifici quali astenia e alterazioni neuro-psichiche", "Tutte le precedenti manifestazioni elencate"], correct: 3, explanation: "L'esacerbazione dell'iperparatiroidismo primario è storicamente nota nel mondo anglosassone con il detto 'Stones (calcoli), bones (ossa), groans (dolori addominali) and moans (disturbi psichici)', racchiudendo le ampie sequele dell'ipercalcemia cronica." },
+            { id: 129, text: "Allo stato dell'arte odierno, qual è il 'gold standard' chirurgico per il trattamento di un esteso gozzo multinodulare benigno in accrescimento?", options: ["Tiroidectomia totale completa", "Tiroidectomia subtotale di un tempo", "Lobectomia unilaterale conservando sempre l'istmo", "Solo un trial di radioterapia radiometabolica"], correct: 0, explanation: "Per i gozzi multinodulari bilaterali con indicazione chirurgica (es. sintomi compressivi), la tiroidectomia totale è diventata la procedura d'elezione per scongiurare definitivamente qualsiasi rischio di recidiva del gozzo sui residui ghiandolari nel tempo." },
+            { id: 130, text: "Per il trattamento di quale patologia surrenalica l'approccio tramite surrenalectomia laparoscopica è considerato oggi il 'gold standard' incontrastato?", options: ["Grosse masse francamente invasive sospette per carcinoma corticale", "Grosse neoplasie maligne primarie con metastasi a distanza", "Piccoli adenomi surrenalici benigni e secernenti (es. per Iperaldosteronismo primario di Conn)", "Soltanto per il prelievo di milza accessoria"], correct: 2, explanation: "Per lesioni surrenaliche di dimensioni non eccessive e macroscopicamente benigne (sebbene funzionalmente attive causando sindrome di Conn o di Cushing), la chirurgia laparoscopica garantisce efficacia, basso trauma e pronto recupero." },
+            { id: 131, text: "Analizzando l'incidenza delle localizzazioni, quale sede primaria di origine per i Tumori Neuroendocrini Gastrointestinali (GI-NET) si associa alla peggior sopravvivenza a 5 anni?", options: ["L'appendice cecale", "L'intestino tenue", "Il colon", "La giunzione retto-anale"], correct: 2, explanation: "I NET che si originano lungo il colon si presentano di frequente in stadio già locoregionalmente avanzato, tendono ad essere di maggiori dimensioni e con un grading superiore, portando così a una peggior prognosi complessiva." },
+            { id: 132, text: "Quale esame diagnostico di imaging medico-nucleare si rivela particolarmente specifico e utile per localizzare e stadiare un tumore gastrinoma?", options: ["Octreoscan (Scintigrafia recettoriale) o PET-CT con Gallio-68 DOTATOC", "Scintigrafia miocardica d'emergenza con MIBG", "Scintigrafia puramente paratiroidea con Sestamibi", "Esclusivamente l'ecografia transaddominale epatica"], correct: 0, explanation: "I gastrinomi, essendo tumori neuroendocrini, esprimono molto frequentemente sulla loro superficie un'elevata densità di recettori per la Somatostatina. L'Octreoscan sfrutta analoghi radiomarcati per evidenziarli." },
+            { id: 133, text: "Qual è il corretto approccio chirurgico per il trattamento asportativo dei gastrinomi pancreatici della ZES?", options: ["È invariabile: sempre e solo duodeno-cefalo-pancreasectomia per sicurezza", "Solo la semplice enucleazione locale per ogni tumore, a prescindere", "Nessuna, l'unico trattamento è il trapianto totale epato-pancreatico", "L'approccio varia moltissimo (da enucleazione a pancreatectomie ampie) basandosi in modo mirato su sede, dimensione e invasività della massa"], correct: 3, explanation: "L'intervento va rigorosamente modulato (chirurgia tailor-made): piccoli tumori ben circoscritti e superficiali si possono semplicemente enucleare per preservare il parenchima, mentre tumori profondi, multipli o mal posizionati possono imporre ampie resezioni (distale, cefalica)." },
+            { id: 134, text: "Anatomicamente, in quali precisi distretti vascolari riversa il proprio contenuto la Vena Surrenalica Sinistra?", options: ["Rigorosamente e solo all'interno della grande Vena Cava Inferiore come a destra", "Immette direttamente e solo le sue diramazioni all'interno della Vena Porta", "Drena in modo caratteristico nella Vena Renale Sinistra, sovente ricevendo o affiancandosi al flusso della Vena Frenica Inferiore Sinistra", "Esclusivamente nell'intricato plesso venoso perigastrico"], correct: 2, explanation: "Rispetto al versante destro, la vena surrenalica sinistra descrive un tragitto rettilineo verso il basso confluendo assieme alla vena frenica inferiore a livello del margine superiore della vena renale sinistra." },
+            { id: 135, text: "Un voluminoso feocromocitoma quando può essere inequivocabilmente considerato di natura 'maligna'?", options: ["Ogniqualvolta misuri diametri eccedenti in modo chiaro i 3 centimetri", "In ogni caso in cui venga dimostrata la sua insorgenza bilaterale o multicentrica", "L'unico fattore assodato è se il paziente sviluppa iperglicemie resistenti all'insulina", "Solamente qualora si riesca a documentare la presenza oggettiva di metastasi a distanza (es. fegato o scheletro)"], correct: 3, explanation: "Sul piano puramente istologico e morfologico al microscopio, le cellule del feocromocitoma non forniscono mai criteri precisi e assoluti per discriminarne la malignità potenziale. L'unica validazione pre/post-operatoria certa e infallibile della malignità è la presenza accertata di metastasi sistemiche a distanza." },
+            { id: 136, text: "Quale livello linfonodale (stazione) rappresenta il compartimento centrale, di primaria importanza nella patologia tiroidea?", options: ["Livello II", "Livello IV", "Livello VI", "Livello VIII"], correct: 2, explanation: "Il livello VI costituisce il compartimento centrale del collo (linfonodi pretracheali, paratracheali e prelaringei/Delfian) ed è la prima stazione di drenaggio linfatico per la maggior parte dei tumori tiroidei." },
+            { id: 137, text: "Quale problematica clinico-chirurgica è tipicamente causata dalle ghiandole paratiroidi ectopiche o soprannumerarie?", options: ["Non secernono mai PTH", "Sono causa frequente di iperparatiroidismo secondario", "Sono la causa principale di iperparatiroidismo persistente post-operatorio", "Degenerano sistematicamente in carcinoma"], correct: 2, explanation: "Le paratiroidi ectopiche (situate es. nel mediastino o diffuse nel collo) o le ghiandole soprannumerarie (più di 4) sono insidiose da individuare e rappresentano la causa più comune di fallimento chirurgico e iperparatiroidismo persistente." },
+            { id: 138, text: "Di fronte a un nodulo tiroideo il cui agoaspirato restituisce un referto citologico TIR5, qual è la condotta terapeutica di scelta?", options: ["Follow-up clinico-ecografico a 6 mesi", "Enucleazione del solo nodulo", "Lobectomia diagnostica", "Tiroidectomia totale"], correct: 3, explanation: "Il referto TIR5 indica una diagnosi citologica conclusiva di malignità (es. carcinoma papillare). Le linee guida indicano come gold standard l'exeresi chirurgica oncologica, tipicamente la tiroidectomia totale." },
+            { id: 139, text: "Quali organi rappresentano le sedi anatomiche di gran lunga più frequenti per l'insorgenza di un gastrinoma?", options: ["Stomaco e fegato", "Duodeno e pancreas", "Cistifellea e dotti biliari", "Ileo e appendice"], correct: 1, explanation: "I gastrinomi si localizzano per il 70-90% dei casi nel 'Triangolo del Gastrinoma' (Triangolo di Passaro), che anatomicamente comprende la parete del duodeno (sede più comune in assoluto) e la testa del pancreas." },
+            { id: 140, text: "Per quale dei seguenti interventi di endocrino-chirurgia è assolutamente mandatoria una scrupolosa preparazione farmacologica per evitare complicanze intraoperatorie letali?", options: ["Tiroidectomia per gozzo multinodulare", "Surrenectomia per incidentaloma non secernente", "Paratiroidectomia per adenoma", "Surrenectomia per feocromocitoma"], correct: 3, explanation: "L'asportazione di un feocromocitoma richiede una preparazione di settimane con alfa-bloccanti ed espansione della volemia, per prevenire picchi ipertensivi durante la manipolazione del tumore e grave ipotensione post-rimozione." },
+            { id: 141, text: "Tra gli organi derivanti dal foregut embrionale, quale rappresenta la sede più frequente di insorgenza dei Tumori Neuroendocrini (NET)?", options: ["Stomaco", "Polmoni", "Pancreas", "Timo"], correct: 1, explanation: "NOTA: le sbobine sono molto vaghe, ma sia nelle 23-24 che nelle 24-25 c’è espressamente scritto che tra quelli del foregut (intestino esterno formato da polmoni, timo, stomaco, duodeno e pancreas) i polmoni sarebbero quelli più frequenti. Invece se si parla di GI-NET, del tratto gastrointestinale, le percentuali diventano: piccolo intestino/intestino tenue(45%), retto(20%), appendice(17%), colon(11%),stomaco(7%)" },
+            { id: 142, text: "Durante l'esplorazione chirurgica del collo, quali ghiandole paratiroidi risultano essere soggette a minore variabilità anatomica di posizione?", options: ["Le due paratiroidi inferiori", "Le due paratiroidi superiori", "Solo la paratiroide inferiore sinistra", "Tutte presentano la medesima variabilità"], correct: 1, explanation: "Le paratiroidi superiori (derivate dalla IV tasca branchiale) hanno un tragitto migratorio embrionale molto breve, per cui la loro posizione è decisamente più costante (solitamente posteriori al terzo medio-superiore della tiroide) rispetto alle inferiori che migrano col timo." },
+            { id: 143, text: "Quale livello di calcemia sierica definisce clinicamente l'insorgenza di una 'crisi ipercalcemica', rappresentando un'urgenza medica?", options: ["Superiore a 10 mg/dl", "Superiore a 11,5 mg/dl", "Superiore a 12,5 mg/dl", "Uguale o superiore a 14 mg/dl"], correct: 3, explanation: "Sebbene l'ipercalcemia sia già diagnosticabile a valori inferiori, la vera e propria 'crisi ipercalcemica' (caratterizzata da disidratazione grave, confusione, coma e aritmie) si innesca tipicamente a valori ≥ 14 mg/dl." },
+            { id: 144, text: "In quale variante delle Sindromi da Neoplasia Endocrina Multipla (MEN) è possibile e frequente riscontrare un gastrinoma?", options: ["Sindrome MEN 1", "Sindrome MEN 2A", "Sindrome MEN 2B", "Nessuna di queste"], correct: 0, explanation: "I gastrinomi (spesso multipli e maligni) sono i tumori neuroendocrini pancreatico-duodenali funzionanti più comuni nella MEN 1 (Sindrome di Wermer), che coinvolge Paratiroidi, Pancreas e Ipofisi." },
+            { id: 145, text: "La mutazione germinale del proto-oncogene RET è il fattore di rischio eziologico alla base dello sviluppo di quali patologie?", options: ["Carcinoma papillare e adenoma paratiroideo", "Carcinoma midollare della tiroide e Feocromocitoma", "Gastrinoma e insulinoma", "Esclusivamente carcinoma anaplastico"], correct: 1, explanation: "Le mutazioni del gene RET causano le sindromi MEN 2. Il Carcinoma Midollare della Tiroide è presente nel 100% dei portatori, mentre il Feocromocitoma (spesso bilaterale) si sviluppa in circa il 50% dei casi." },
+            { id: 146, text: "Come possono presentarsi i livelli sierici di calcio nelle fasi iniziali di un iperparatiroidismo primario confermato?", options: ["Sempre e solo francamente elevati", "Costantemente bassi (ipocalcemia)", "Elevati oppure normali", "Invariabilmente normali in ogni fase"], correct: 2, explanation: "Esiste un'entità clinica ben riconosciuta come 'Iperparatiroidismo primario normocalcemico', in cui il PTH è cronicamente elevato ma il calcio totale e ionizzato risultano (specie inizialmente) nei limiti alti della norma, per poi poter evolvere in ipercalcemia franca." },
+            { id: 147, text: "Quali tra i seguenti sono tipi di punti di ingresso descritti per le tecniche di tiroidectomia remota/laparoscopica senza cicatrici visibili sul collo?", options: ["Sottoascellare", "Toracica", "Vestibolare", "Tutte le precedenti"], correct: 3, explanation: "La chirurgia remota per la tiroide ha sviluppato diversi accessi: l'accesso transascellare, quello toracico/mammario (es. tecnica BABA) e l'approccio transorale vestibolare (TOETVA)." },
+            { id: 148, text: "Tra i seguenti farmaci, quale DEVE essere prescritto a vita a un paziente che ha subito una tiroidectomia totale?", options: ["TSH ricombinante", "Somatostatina", "Calcitonina sintetica", "Nessuna delle precedenti"], correct: 3, explanation: "Nessuno dei farmaci elencati è quello corretto (era una domanda a trabocchetto). Il farmaco salvavita da somministrare obbligatoriamente dopo una tiroidectomia totale è la Levotiroxina (L-T4), per compensare l'assenza degli ormoni tiroidei." },
+            { id: 149, text: "Sindrome MEN 2: quali patologie sono tipicamente associate ad essa?", options: ["Feocromocitoma, Iperparatiroidismo, CMT (Carcinoma Midollare della Tiroide)", "Gastrinoma, Insulinoma, Adenoma ipofisario", "Carcinoma papillare, Linfoma, Insulinoma", "Solo Feocromocitoma e Gastrinoma"], correct: 0, explanation: "La MEN 2 è caratterizzata dalla presenza costante di Carcinoma Midollare della Tiroide (CMT), spesso associato a Feocromocitoma e, nella variante 2A, a patologie delle paratiroidi." },
+            { id: 150, text: "Cosa secernono le cellule D (delta) del pancreas?", options: ["Insulina", "Glucagone", "Somatostatina (SS)", "Gastrina"], correct: 2, explanation: "Le cellule D (o delta) delle isole pancreatiche secernono Somatostatina (SS), un ormone con potente azione inibitoria su diverse funzioni endocrine ed esocrine." },
+            { id: 151, text: "Perché chiamiamo le cellule del feocromocitoma 'cellule cromaffini'?", options: ["Perché si colorano intensamente con i sali d'argento", "Perché si colorano di scuro a contatto con i sali di cromo", "Perché contengono pigmenti di melanina", "Perché riflettono la luce polarizzata al microscopio"], correct: 1, explanation: "Vengono definite 'cromaffini' (affini al cromo) in quanto le catecolamine contenute nei loro granuli si ossidano a contatto con i sali di cromo, assumendo una tipica colorazione bruno-scura." },
+            { id: 152, text: "Qual è la procedura chirurgica di scelta nel caso di singolo adenoma del surrene sinistro che causa una sindrome di Cushing, ACTH-indipendente?", options: ["Adrenalectomia bilaterale laparotomica", "Adrenalectomia monolaterale sinistra laparoscopica", "Resezione parziale laparoscopica del surrene sinistro", "Resezione laparoscopica del solo adenoma senza adrenalectomia"], correct: 1, explanation: "L'adrenalectomia monolaterale laparoscopica è il gold standard per gli adenomi surrenalici singoli secernenti (Cushing o Conn), garantendo l'asportazione radicale della ghiandola patologica con minimi tempi di recupero." },
+            { id: 153, text: "Qual è la strategia chirurgica preferita nei pazienti con iperplasia multighiandolare delle paratiroidi per iperparatiroidismo familiare (MEN1)?", options: ["Resezione della ghiandola superiore e inferiore di un lato, lasciando le altre", "Resezione di solo una delle ghiandole macroscopicamente ingrossate", "Resezione di tutte e quattro le ghiandole con autotrapianto di frammento nel muscolo", "Non c'è indicazione chirurgica, ma è indicata solo terapia medica"], correct: 2, explanation: "Nella MEN1 l'iperplasia colpisce tutte le ghiandole in quanto difetto genetico sistemico; l'asportazione totale (o subtotale) con autotrapianto (es. nell'avambraccio o nello sternocleidomastoideo) previene le recidive cervicali e agevola i re-interventi." },
+            { id: 154, text: "Quando il feocromocitoma è considerato maligno in fase diagnostica (prima quindi del trattamento chirurgico)?", options: ["Dimensioni superiori a 3 cm", "Se si presenta bilaterale", "Per la presenza documentata di metastasi", "Tutte le risposte precedenti sono corrette"], correct: 2, explanation: "Non esistono criteri istologici o citologici assoluti per stabilire la malignità di un feocromocitoma al microscopio; esso viene definito maligno clinicamente ed esclusivamente in presenza di metastasi in sedi dove le cellule cromaffini sono fisiologicamente assenti (es. linfonodi, fegato, ossa).Infatti nella classificazione della World Health Organization la dicitura 'feocromocitoma' maligno è stata sostituita con 'feocromocitoma metastatico'." },
+            { id: 155, text: "Quale trattamento chirurgico è indicato nel caso di NET gastrico tipo 3?", options: ["Resezione endoscopica", "Resezione dell'antro gastrico", "Gastro-resezione parziale senza asportazione dei linfonodi perigastrici", "Gastrectomia totale o parziale con linfoadenectomia"], correct: 3, explanation: "I NET gastrici di Tipo 3 sono neoplasie sporadiche e solitarie, non associate ad ipergastrinemia e caratterizzate da un elevato potenziale aggressivo e metastatico. Il trattamento richiede ampie resezioni oncologiche (gastrectomia) con linfoadenectomia, seguendo gli stessi criteri dell'adenocarcinoma gastrico." },
+            { id: 156, text: "Quale delle seguenti neoplasie non è presente nella MEN1?", options: ["Adenomi ipofisari", "Feocromocitoma", "Insulinoma", "Gastrinoma"], correct: 1, explanation: "Il feocromocitoma è tipico delle sindromi MEN2. La MEN1 (nota anche come sindrome delle 3 P) si caratterizza invece per alterazioni e tumori a carico di Pituitary (Ipofisi), Paratiroidi e Pancreas endocrino (Insulinoma, Gastrinoma)." },
+            { id: 157, text: "Qual è la fase chirurgica più critica durante l'adrenalectomia destra?", options: ["Identificazione della ghiandola surrenale destra", "Isolamento e separazione dal polo superiore del rene", "Identificazione, chiusura e sezione della vena surrenalica destra", "Isolamento e separazione dal margine inferiore del lobo destro del fegato"], correct: 2, explanation: "La vena surrenalica destra è proverbialmente cortissima e sfocia a piombo e direttamente nella vena cava inferiore. Qualsiasi trazione incauta o errata in questa specifica fase di isolamento venoso può causare lacerazioni della cava ed emorragie massive repentine e spesso fatali." },
+            { id: 158, text: "Quando viene effettuato il dosaggio del PTH intraoperatorio?", options: ["Durante paratiroidectomia mini-invasiva", "Durante lobectomia tiroidea", "Durante adrenalectomia monolaterale mini-invasiva", "Durante paratiroidectomia bilaterale open"], correct: 0, explanation: "Il dosaggio del PTH intraoperatorio (Criterio di Miami) si utilizza tipicamente durante la Paratiroidectomia Mini-Invasiva per adenoma singolo: verificando che il Paratormone scenda di oltre il 50% in 10-15 minuti dall'asportazione, il chirurgo ha la certezza di aver rimosso il tessuto ipersecernente senza dover esplorare gli altri quadranti del collo." },
+            { id: 159, text: "Qual è la complicanza più frequente nelle resezioni della testa del pancreas?", options: ["Fistola pancreatica", "Pancreatite del moncone rimanente", "Sanguinamento del moncone rimanente", "Crisi ipoglicemiche"], correct: 0, explanation: "La complicanza chirurgica di gran lunga più frequente e temibile dopo una duodenocefalopancreasectomia (DCP) è la deiscenza dell'anastomosi pancreato-digiunale, che esita nella formazione di una fistola pancreatica, causando lo spandimento di enzimi digestivi epatotossici nell'addome." },
+            { id: 160, text: "Nel paziente splenectomizzato per resezione distale del pancreas, aumenta il rischio di...?", options: ["Trombosi portale", "Anemizzazione cronica", "Infarto del miocardio", "Infezione"], correct: 0, explanation: "Questa complicanza vascolare è nota in letteratura e può essere favorita dalla manipolazione chirurgica, dalla stasi venosa e dalla trombocitosi reattiva post-operatoria. NOTA: anche infezione sembrerebbe giusta" },
+            { id: 161, text: "Quali dei seguenti indicatori è necessario per la pianificazione della strategia terapeutica del P-NETs?", options: ["Markers tumorali", "Indici di funzionalità pancreatica esocrina", "Indice del grado di differenziazione tumorale (Ki-67)", "Tutti i precedenti"], correct: 3, explanation: "Sono tutti parametri essenziali prima di attuare una qualsiasi strategia" },
+            { id: 162, text: "Nell'iperparatiroidismo primario, come può essere il livello di calcio sierico?", options: ["Elevato", "Normale", "Basso", "Elevato o Normale"], correct: 3, explanation: "Generalmente la calcemia è elevata, ma esiste una forma nota come 'iperparatiroidismo primario normocalcemico' in cui il PTH è alto ma il calcio totale rientra ancora nei limiti della norma." },
+            { id: 163, text: "Qual è la più frequente causa di iperparatiroidismo secondario?", options: ["metastasi ossee", "insufficienza renale cronica", "adenoma paratiroideo ectopico", "tumore renale"], correct: 1, explanation: "L'insufficienza renale cronica altera il metabolismo della Vitamina D e del fosforo, innescando un'ipocalcemia che costringe le paratiroidi a un iperparatiroidismo secondario compensatorio." },
+            { id: 164, text: "Quale delle seguenti procedure chirurgiche può rendersi necessaria durante una tiroidectomia totale, se è presente un gozzo retrosternale di grosse dimensioni?", options: ["Asportazione dei linfonodi del collo e del mediastino", "Sternotomia", "Sezione dei muscoli sternocleidomastoidei", "Tutte le precedenti risposte sono corrette"], correct: 1, explanation: "Quando un gozzo retrosternale è particolarmente voluminoso o bloccato nel mediastino e non può essere estratto dal collo in sicurezza, si rende necessaria l'apertura dello sterno (sternotomia)." },
+            { id: 165, text: "Nel caso di un nodulo tiroideo benigno solitario, quale procedura chirurgica è più indicata?", options: ["Tiroidectomia totale", "Tiroidectomia subtotale", "Lobectomia tiroidea unilaterale con rimozione dell'istmo", "Rimozione locale del singolo nodulo"], correct: 2, explanation: "La lobectomia con istmectomia è l'intervento chirurgico definitivo, radicale e sicuro per trattare un nodulo isolato benigno confinato a un singolo lobo." },
+            { id: 166, text: "Nel caso di singolo carcinoma tiroideo (TIR5) localizzato in un lobo, quale tipo di intervento è necessario effettuare?", options: ["Tiroidectomia totale", "Tiroidectomia sub totale", "Lobectomia tiroidea unilaterale con rimozione dell’istmo", "Rimozione locale del singolo nodulo"], correct: 0, explanation: "Il gold standard terapeutico oncologico per i carcinomi tiroidei differenziati (TIR5) superiori al centimetro è la tiroidectomia totale." },
+            { id: 167, text: "Che azione viene raccomandata dalle linee guida nel caso di categoria diagnostica TIR 1 all'ago aspirato (FNA) di singolo nodulo tiroideo che ecograficamente ha caratteristiche sospette e dimensione superiore a un cm?", options: ["Follow-up senza trattamento chirurgico", "Lobectomia diagnostica", "Tiroidectomia sub-totale", "Tiroidectomia totale"], correct: 1, explanation: "Se l'esame è non diagnostico (TIR1) ma l'ecografia mostra caratteristiche francamente sospette, è prudente e raccomandata l'asportazione chirurgica della metà tiroidea (lobectomia diagnostica)." },
+            { id: 168, text: "Se all'ago aspirato di un nodulo tiroideo (FNA) la diagnosi orienta verso un carcinoma midollare della tiroide, quale delle seguenti procedure diagnostiche è suggerita come primo step dalla Japan Association of Endocrine Surgery?", options: ["Counseling genetico.", "Lobectomia diagnostica", "Asportazione di linfonodo sentinella per valutare l'eventuale presenza di metastasi linfonodali", "Valutazione dei valori di calcitonina nel sangue"], correct: 0, explanation: "Il counseling genetico è il primo passo raccomandato perché circa un quarto dei carcinomi midollari della tiroide è ereditario e legato a una mutazione del gene RET, e conoscerla prima dell'operazione è vitale per la tua sicurezza e per la scelta del tipo di chirurgia." },
+            { id: 169, text: "Quale dei seguenti tumori tiroidei può insorgere nell'ambito di una MEN2?", options: ["Follicolare", "Papillare", "Midollare", "Carcinoma delle cellule di Hurtle"], correct: 2, explanation: "Il carcinoma midollare della tiroide è la manifestazione clinica principale e immancabile delle sindromi familiari MEN2." },
+            { id: 170, text: "Quale delle seguenti è la complicanza più seria della tiroidectomia?", options: ["Danno al nervo laringeo ricorrente", "Rimozione accidentale di una paratiroide", "Cicatrice cheloidea", "Edema laringeo"], correct: 0, explanation: "La lesione del nervo laringeo ricorrente provoca la paralisi delle corde vocali, che se bilaterale può causare un gravissimo e letale soffocamento respiratorio acuto." },
+            { id: 171, text: "Quali dei seguenti trattamenti può essere indicato dopo tiroidectomia totale o quasi totale per carcinoma della tiroide e di qualunque variante istologica?", options: ["Terapia orale a base di calcitonina", "Supplementazione di vitamina", "Idratazione endovenosa sporadica", "Cicli di ablazione con radioiodio"], correct: 3, explanation: "Sebbene la domanda citi 'qualunque variante', nei carcinomi tiroidei classici differenziati il ciclo di ablazione con radioiodio è il trattamento indicato per distruggere ogni residuo microscopico o metastatico." },
+            { id: 172, text: "In quanti sotto compartimenti sono suddivisi i linfonodi del compartimento centrale del collo?", options: ["2", "3", "4", "6"], correct: 2, explanation: "Il collo è standardizzato e suddiviso in 6 stazioni o livelli linfonodali principali, dal Livello I al Livello VI. Quest'ultimo, chiamato anche compartimento centrale, è a sua volta suddiviso in 4 sotto compartimenti: A superiormente, B a destra, C inferiormente, D a sinistra." },
+            { id: 173, text: "Dopo lobectomia tiroidea destra per singolo nodulo del lobo destro della tiroide risultato essere un carcinoma papillare, l’esame istologico evidenzia anche un microcarcinoma papillare vicino al margine di resezione dell’istmo tiroideo. Cosa è indicato fare in questo caso?", options: ["Tiroidectomia di completamento", "Resezione del resto dell’istmo, lasciando in sede il lobo sinistro", "Semplice follow-up ecografico del lobo sinistro", "Discussione del caso in riunione multidisciplinare per decidere in base al caso singolo"], correct: 0, explanation: "Il riscontro di malattia ai margini di resezione dell'istmo comporta un rischio elevato di presenza di altri focolai, rendendo clinicamente necessaria la tiroidectomia di completamento." },
+            { id: 174, text: "Il sestamibi, in quale componente cellulare si incorpora avidamente?", options: ["Apparato del Golgi", "Mitocondri", "Lisosomi", "Nucleo"], correct: 1, explanation: "Il Sestamibi è un radiofarmaco lipofilo che si concentra elettivamente nei mitocondri. Le cellule ossifile degli adenomi paratiroidei ne sono ricchissime, favorendo l'imaging." },
+            { id: 175, text: "Qual è la principale causa di morte nei pazienti affetti da Men1?", options: ["Crisi ipercalcemica", "Crisi ipoglicemica", "Tumore ipofisario", "Tumore neuroendocrino gastroenteropancreatico ( GP-NET)"], correct: 3, explanation: "Nella sindrome MEN1, la causa primaria e più grave di ridotta sopravvivenza è legata all'evoluzione aggressiva e metastatica dei tumori neuroendocrini addominali (GEP-NET)." },
+            { id: 176, text: "Perché è indicato il follow-up regolare a lungo termine nei pazienti affetti da MEN1 o MEN2 che hanno subito asportazione di tumori legati a tale patologia?", options: ["Controllo delle alterazioni ormonali rispetto alle ghiandole asportate", "Controllo della sintomatologia legata al tipo di tumore asportato", "Controllo delle complicanze legate al tipo di intervento effettuato", "Controllo del rischio di recidiva del tumore asportato o di insorgenza di altro tipo di tumore"], correct: 3, explanation: "Le sindromi MEN derivano da mutazioni genetiche germinali, per cui i pazienti mantengono a vita il rischio di sviluppare progressivamente altri tumori previsti dal quadro sindromico." },
+            { id: 177, text: "Per effettuare l’intervento di adrenalectomia laparoscopica, quanti chirurghi sono necessari?", options: ["1", "2", "3", "4"], correct: 1, explanation: "Per eseguire in sicurezza una procedura laparoscopica sul surrene sono indispensabili 2 chirurghi: il primo operatore e il fondamentale assistente che manovra la videocamera." },
+            { id: 178, text: "Qual è lo scopo principale della gestione preoperatoria dei pazienti da sottoporre ad adrenalectomia?", options: ["Prevenire le infezioni di ferita", "Prevenire le alterazioni metaboliche", "Prevenire le crisi ipertensive intraoperatorie", "Prevenire le alterazioni dell’alvo"], correct: 2, explanation: "Nel caso di surrenectomia (specificamente per feocromocitoma), la preparazione farmacologica con alfa-bloccanti è vitale per prevenire crisi ipertensive fatali sollecitate dal tocco del tumore." },
+            { id: 179, text: "In quale metodica chirurgica viene utilizzato l’approccio vestibolare per tiroidectomia?", options: ["Tiroidectomia mini invasiva anteriore (MIVAT)", "Tiroidectomia Mining, vasi transascellare (MIT)", "Tiroidectomia endoscopica transorale", "Nessuna metodica chirurgica per tiroidectomia utilizza l’approccio vestibolare"], correct: 2, explanation: "L'approccio transorale (TOETVA) è una via endoscopica che passa attraverso il vestibolo inferiore della bocca per asportare la tiroide senza lasciare cicatrici visibili sul collo." },
+            { id: 180, text: "Qual è la più frequente localizzazione anatomica dei tumori neuroendocrini gastrointestinali (GI-NETs)?", options: ["Piccolo intestino", "Appendice", "Retto", "Stomaco"], correct: 0, explanation: "NOTA: sarebbe segnata l'appendice come risposta esatta, ma le percentuali delle sbobine sono 45-50% per il tenue (o piccolo intestino), e 17% per l'appendice" },
+            { id: 181, text: "Secondo le statistiche internazionali, qual è la sopravvivenza a cinque anni dei pazienti con diagnosi di carcinoma midollare della tiroide sporadico?", options: ["50%", "75%", "85%", "95%"], correct: 1, explanation: "Il carcinoma midollare ha una prognosi significativamente più severa rispetto ai carcinomi tiroidei differenziati, attestando la sopravvivenza a 5 anni per le forme sporadiche intorno al 75-80%." },
+            { id: 182, text: "Dove fa metastasi il feocromocitoma?", options: ["Fegato", "Ossa e linfonodi", "Polmoni", "Tutte le precedenti"], correct: 3, explanation: "Quando il feocromocitoma si rivela francamente maligno, le sue cellule neuroendocrine diffondono massivamente creando metastasi a livello epatico, osseo, polmonare e linfonodale." },
+            { id: 183, text: "Quali caratteristiche ha la chirurgia mini invasiva?", options: ["Si fa su strutture di piccole dimensioni", "Permette minor lesioni e complicanze chirurgiche", "Si fa con strumenti di piccole dimensioni", "Tutte le risposte sono esatte"], correct: 3, explanation: "La chirurgia mini-invasiva combina strumenti dal diametro ridotto a un accesso traumatico minimo, abbattendo il rischio di ampie lesioni tissutali per aggredire adenomi o strutture di piccole dimensioni." },
+            { id: 184, text: "Un paziente che ha subito da poco una tiroidectomia totale presenta difficoltà respiratoria ed edema nella regione del collo. Non ha il drenaggio, ha terapia d’ossigeno da canule nasali al 4%, saturazione 92%. Come si interviene?", options: ["Si aumenta l’ossigeno", "TC", "Risonanza magnetica", "Si apre qualche punto di sutura al letto del paziente"], correct: 3, explanation: "Il quadro descrive un ematoma cervicale soffocante in rapida espansione. L'emergenza richiede la decompressione tempestiva aprendo immediatamente la ferita al letto del paziente per liberare la trachea." },
+            { id: 185, text: "Quale delle seguenti affermazioni sulle paratiroidi ectopiche è corretta?", options: ["Sono rare", "Non possono localizzarsi in collo o mediastino", "Non sono causa di iperparatiroidismo persistente", "Rappresentano una causa di fallimento chirurgico e iperparatiroidismo persistente"], correct: 3, explanation: "Le paratiroidi in posizione anatomica ectopica (spesso migrate nel mediastino insieme al timo) sono insidiose da individuare e rappresentano una delle cause più frequenti di iperparatiroidismo persistente dopo la chirurgia." },
+            { id: 186, text: "Dove fanno metastasi i paragangliomi:", options: ["Ossa e linfonodi", "Polmoni", "Fegato", "Tutte le precedenti"], correct: 3, explanation: "I paragangliomi (feocromocitomi extrasurrenalici), analogamente ai tumori della midollare, mostrano una diffusione metastatica aggressiva verso ossa, fegato e linfonodi." },
+            { id: 187, text: "Quale delle seguenti affermazioni sul GI-NET dell’appendice è corretta:", options: ["Sono i tumori più frequenti dell’appendice", "Sono spesso maligni", "Sono spesso non secernenti", "Viene fatta emicolectomia destra, anche se il tumore è inferiore a due cm"], correct: 0, explanation: "I carcinoidi (GI-NET) sono in assoluto le neoplasie primitive più frequentemente diagnosticate a carico dell'appendice cecale, spesso scoperti incidentalmente e di natura perlopiù benigna o indolente." },
+            { id: 188, text: "A cosa deve fare attenzione il chirurgo durante una adrenalectomia?", options: ["Tessuto adiposo", "Distretto venoso", "Distretto arterioso", "Linfonodi"], correct: 1, explanation: "L'identificazione, l'isolamento e la legatura sicura del distretto venoso (specialmente l'insidiosa vena surrenalica destra) è il momento più critico e a maggior rischio di sanguinamento fulminante dell'intera operazione." },
+            { id: 189, text: "qual è il GI-NET foregut più frequente?", options: ["Stomaco", "Polmone", "Pancreas", "Duodeno"], correct: 1, explanation: "NOTA: le sbobine sono molto vaghe, ma sia nelle 23-24 che nelle 24-25 c’è espressamente scritto che tra quelli del foregut (intestino esterno formato da polmoni, timo, stomaco, duodeno e pancreas) i polmoni sarebbero quelli più frequenti. Invece se si parla di GI-NET, del tratto gastrointestinale, le percentuali diventano: piccolo intestino/intestino tenue(45%), retto(20%), appendice(17%), colon(11%),stomaco(7%)" },
+            { id: 190, text: "Qual è secondo le linee guida il corretto ordine diagnostico?", options: ["BAO-test di simulazione secretina-gastrinemia", "Gastrinemia-BAO-test di simulazione secretina", "BAO-gastrinemia-test simulazione secretina", "Gastrinemia-test simulazione secretina-BAO"], correct: 1, explanation: "L'iter per il gastrinoma parte dal sospetto con la misurazione della Gastrinemia, confermata dalla valutazione dell'acidità (BAO), e certificata infine dinamicamente con il test di simulazione alla secretina." },
+            { id: 191, text: "Quale neoplasia è presente nelle MEN2?", options: ["Feocromocitoma", "Ipofisi", "GI-NETs", "Adenoma papillare della tiroide"], correct: 0, explanation: "Il feocromocitoma è una neoplasia tipicamente associata alle sindromi MEN2 (sia 2A che 2B), manifestandosi in circa il 50% dei pazienti." },
+            { id: 192, text: "In quale tumore la gravità è associata alla mutazione del gene RET:", options: ["Ipofisi", "Adenoma papillare della tiroide", "Carcinoma midollare della tiroide", "GI-NETs"], correct: 2, explanation: "Il Carcinoma midollare della tiroide familiare è causato da mutazioni del proto-oncogene RET. La gravità clinica e l'età di insorgenza sono direttamente correlate allo specifico codone del gene mutato." },
+            { id: 193, text: "In caso di carcinoma tiroideo TIR5 quale chirurgia è più indicata:", options: ["Tiroidectomia totale", "Tiroidectomia subtotale", "Lobectomia", "Lobectomia+ rimozione linfonodi"], correct: 0, explanation: "Per la categoria citologica TIR5 (rischio di malignità > 95%), le linee guida indicano come gold standard la tiroidectomia totale, fondamentale per asportare la neoplasia ed eventuali focolai controlaterali." },
+            { id: 194, text: "Quale affermazione sulla tiroide è corretta:", options: ["Localizza tra C5 e T1", "Localizza tra T2 e T6", "Localizza nel mediastino anteriore", "Localizza alla base della lingua (C1-C3)"], correct: 0, explanation: "Anatomicamente, la ghiandola tiroidea è situata nella regione anteriore del collo, estendendosi tipicamente dal livello della quinta vertebra cervicale (C5) fino alla prima vertebra toracica (T1)." },
+            { id: 195, text: "Quale affermazione sul nervo ricorrente è corretta:", options: ["Localizzato maggiormente nell’angolo tra trachea ed esofago", "Non è soggetto a variabilità anatomiche", "Passa superficialmente al muscolo omoioideo", "Innerva i muscoli costrittori della faringe"], correct: 0, explanation: "Il nervo laringeo ricorrente risale verso la laringe alloggiandosi nel solco tracheo-esofageo, un punto di repere fondamentale durante l'intervento di tiroidectomia." },
+            { id: 196, text: "In quante stazioni linfonodali si divide il collo:", options: ["6", "4", "5", "3"], correct: 0, explanation: "A fini clinici e chirurgici oncologici, il collo è standardizzato e suddiviso in 6 stazioni o livelli linfonodali principali (dal Livello I al Livello VI)." },
+            { id: 197, text: "Nell’iperparatiroidismo primario, anche in fase iniziale, come può essere la calcemia:", options: ["Alta", "Normale", "Bassa", "Alta o Normale"], correct: 3, explanation: "In questa patologia, la calcemia può essere palesemente alta o presentarsi normale nelle fasi iniziali (forma normocalcemica)." },
+            { id: 198, text: "Dopo tiroidectomia totale quale ormone deve essere reintegrato oralmente?", options: ["Calcitonina", "Paratormone", "TSH", "Nessuno dei precedenti"], correct: 3, explanation: "Dopo una tiroidectomia totale, deve essere reintegrata a vita la Levotiroxina (L-T4). Poiché non è tra le opzioni (A, B, C), la risposta corretta è 'Nessuno dei precedenti'." },
+            { id: 199, text: "Dopo tiroidectomia subtotale cosa si deve fare in caso di TIR5:", options: ["Ablazione con iodio", "Scintigrafia", "TC", "Sestamibi"], correct: 0, explanation: "Clinicamente sarebbe necessaria prima una 'tiroidectomia di completamento' per rimuovere il lobo residuo. Tuttavia, nell'ottica oncologica della gestione del carcinoma (TIR5), lo step terapeutico differenziale successivo prevede l'ablazione dei focolai maligni con radioiodio." },
+            { id: 200, text: "Quale di queste sono indicazioni per operare un gozzo:", options: ["Estetica", "Sintomi da compressione", "Non responsività ai farmaci", "Tutte le precedenti"], correct: 3, explanation: "Un gozzo multinodulare viene trattato chirurgicamente per motivi di ingombro estetico invalidante, quando genera sintomi da compressione meccanica (disfagia, dispnea) o quando la terapia medica fallisce nel controllarne l'accrescimento." },
+            { id: 201, text: "Quale di questi è associato a GI-NETs gastrico G1:", options: ["Gastrite atrofica cronica (CAG)", "Sindrome Zollinger-Ellison", "Ulcera peptica perforata", "Infezione acuta da H. Pylori"], correct: 0, explanation: "I NET gastrici di tipo 1 (i più frequenti) sono indotti dall'ipergastrinemia cronica secondaria all'acloridria, che è tipicamente causata da una Gastrite Atrofica Cronica autoimmune (CAG)." },
+            { id: 202, text: "Quale di questi è segno di malignità in caso di nodulo tiroideo:", options: ["Margini irregolari", "Calcificazioni", "Estensione extratiroidea", "Tutte le precedenti"], correct: 3, explanation: "L'ecografia sospetta malignità in presenza di margini irregolari o spiculati, microcalcificazioni e segni di invasione dei tessuti molli circostanti (estensione extratiroidea)." },
+            { id: 203, text: "Quali età è il cut-off per la classificazione TNM:", options: ["50 anni", "55 anni", "60 anni", "75 anni"], correct: 1, explanation: "Nell'ottava edizione dell'AJCC per il carcinoma differenziato della tiroide, l'età di 55 anni funge da cut-off: i pazienti sotto i 55 anni hanno una prognosi eccellente e non superano lo stadio II anche in presenza di metastasi a distanza." },
+            { id: 204, text: "Un paziente dopo tiroidectomia totale risulta ipocalcemico7.7mg/dL (v.n. 8.5-10.5 mg/dL). I valori di PTH sono normali, cos’è consigliato fare:", options: ["Somministrazione calcio orale (per tre mesi)", "Somministrazione calcio endovena, poi orale fino a normalizzazione dei valori", "Somministrazione orale di calcio fino a normalizzazione valori", "Somministrazione calcitonina"], correct: 2, explanation: "Poiché il Paratormone (PTH) è normale, non c'è asportazione delle paratiroidi. L'ipocalcemia è transitoria (es. 'hungry bone syndrome'). È sufficiente una somministrazione orale di calcio per correggere il deficit." },
+            { id: 205, text: "Quale di queste è la causa di iperparatiroidismo secondario?", options: ["Insufficienza renale cronica", "Iperplasia paratiroidi", "Problemi cardiovascolari", "Adenoma paratiroideo singolo"], correct: 0, explanation: "L'insufficienza renale cronica è la principale causa di iperparatiroidismo secondario: i reni malati non attivano la Vitamina D e trattengono fosforo, abbassando il calcio sierico e costringendo le paratiroidi all'iperattività." },
+            { id: 206, text: "Cosa viene fatto durante l’intervento per confermare la rimozione della paratiroide patologica:", options: ["Test intraoperatorio per misurazione PTH", "Istologica intraoperatoria delle paratiroidi asportate", "Ecografia cervicale intraoperatoria", "Dosaggio della calcitonina"], correct: 0, explanation: "Il dosaggio rapido intraoperatorio del PTH (Metodo di Miami) permette di verificare in sala operatoria un crollo del PTH (>50% in 10-15 minuti), garantendo di aver asportato la ghiandola colpevole." },
+            { id: 207, text: "Cosa viene fatto per evitare di lesionare il nervo laringeo durante tiroidectomia?", options: ["Monitoraggio con elettrodi del nervo", "Identificazione ed isolamento", "Recisione asettica preventiva", "Nessuna delle precedenti"], correct: 1, explanation: "Sebbene il monitoraggio elettronico sia un ottimo ausilio moderno, la 'regola d'oro' chirurgica essenziale e insostituibile per salvare il nervo è la sua diretta identificazione visiva e il suo delicato isolamento." },
+            { id: 208, text: "Quale di queste sindromi sono associate a carcinoma del surrene:", options: ["Li-Fraumeni", "Sindrome di Marfan", "Sindrome di Zollinger-Ellison", "Sindrome di Conn"], correct: 0, explanation: "La Sindrome di Li-Fraumeni, derivante dalla mutazione del gene oncosoppressore p53, predispone fortemente all'insorgenza del raro carcinoma corticosurrenalico, specialmente in età pediatrica." },
+            { id: 209, text: "Sedi dei paragangliomi:", options: ["Lungo catena gangliare simpatica paravertebrale", "Nel parenchima polmonare distale", "Nella midollare del surrene", "Nell'ipofisi anteriore"], correct: 0, explanation: "I paragangliomi sono tumori extra-surrenalici che originano fisiologicamente dai gangli del sistema neurovegetativo, situati prevalentemente lungo la catena simpatica paravertebrale addominale." },
+            { id: 210, text: "Quale di queste è la manifestazione principale in un insulinoma:", options: ["Ipoglicemia", "Iperglicemia", "Ipocalcemia", "Dolore addominale"], correct: 0, explanation: "L'insulinoma produce insulina in modo sregolato e autonomo, svuotando il sangue dagli zuccheri e causando crisi neuroglicopeniche dovute a severa ipoglicemia a digiuno." },
+            { id: 211, text: "Dove è più frequente la sindrome Zollinger-Ellison:", options: ["Duodeno e pancreas", "Stomaco e pancreas", "Solo pancreas", "Solo stomaco"], correct: 0, explanation: "I gastrinomi, responsabili della Sindrome di Zollinger-Ellison, si localizzano quasi esclusivamente (70-90%) nel 'Triangolo del Gastrinoma', che include l'area del duodeno e la testa del pancreas." },
+            { id: 212, text: "Quale intervento è più indicato in caso di GI-NETs del piccolo intestino:", options: ["Resezione in open", "Resezione endoscopica", "Intervento farmacologico", "Chemioterapia"], correct: 0, explanation: "I NET del piccolo intestino tendono a creare vaste reazioni desmoplastiche, fibrosi e infiltrazione mesenterica. L'approccio laparotomico (open) garantisce un'adeguata esplorazione e una corretta resezione vascolare." },
+            { id: 213, text: "Quale dei seguenti GI-NETs ha la peggior prognosi a cinque anni?", options: ["Appendice", "Intestino tenue", "Colon", "Retto"], correct: 2, explanation: "I carcinoidi localizzati nel colon vengono spesso scoperti tardivamente, quando le dimensioni sono ormai considerevoli e lo stadio di invasione e metastatizzazione è avanzato, peggiorandone severamente la prognosi." },
+            { id: 214, text: "Qual è la sede più frequente dei gastronomi?", options: ["Stomaco e duodeno", "Stomaco e pancreas", "Duodeno e pancreas", "Pancreas soltanto"], correct: 2, explanation: "Nota: la parola 'gastronomi' è un refuso per 'gastrinomi'. La loro sede d'elezione assoluta è l'area che copre la prima/seconda porzione del duodeno e la testa del pancreas." },
+            { id: 215, text: "Qual è il metodo di immagine specifico per localizzare un gastrinoma?", options: ["Octreoscan", "MIBG Scan", "Sestamibi SPECT scan", "Scintigrafia con iodio radioattivo"], correct: 0, explanation: "I gastrinomi, essendo tumori neuroendocrini, presentano un'alta densità di recettori per la somatostatina. L'Octreoscan (o la PET-DOTATOC) utilizza analoghi radiomarcati per illuminare in modo specifico tali recettori." },
+            { id: 216, text: "Qual è la causa della sindrome di Zollinger- Ellison?", options: ["Insulinoma", "Gastrinoma", "Glucagonoma", "Somatostatinoma"], correct: 1, explanation: "La patologia è scatenata da un Gastrinoma, un tumore neuroendocrino che secerne massicce quantità di gastrina, iperstimolando la produzione acida dello stomaco e causando ulcere gravi." },
+            { id: 217, text: "La presentazione clinica più frequente di un insulinoma è:", options: ["Iperglicemia sintomatica", "Ipoglicemia sintomatica", "Dolore addominale", "Malassorbimento"], correct: 1, explanation: "La produzione eccessiva di insulina abbassa drasticamente i livelli di glucosio nel sangue, manifestandosi clinicamente con crisi ipoglicemiche accompagnate da sintomi neuroglicopenici (confusione, svenimenti)." },
+            { id: 218, text: "Il trattamento chirurgico dell’insulinoma del pancreas è:", options: ["Pancreatectomia totale", "Resezione pancreatica parziale", "Escissione locale del tumore", "Tutti i precedenti trattamenti sono possibili e la scelta dipende dalla sede del tumore, dalla dimensione, dal grado di infiltrazione locale"], correct: 3, explanation: "La chirurgia è 'tailored': se il tumore è superficiale e benigno si procede con enucleazione locale; se è profondo o sospetto maligno si opta per ampie resezioni parziali." },
+            { id: 219, text: "In quale delle seguenti multi multiple endocrine neoplasias (MEN) può essere presente il gastrinoma?", options: ["MEN1", "MEN2", "MEN1 e MEN2A", "MEN1 e MEN2B"], correct: 0, explanation: "Il gastrinoma (insieme all'insulinoma) è uno dei tumori neuroendocrini gastroenteropancreatici (GEP-NET) più tipicamente associati alla sindrome MEN1, costituendo la 'P' di Pancreas endocrino." },
+            { id: 220, text: "Quale delle seguenti non è un’indicazione alla chirurgia delle ghiandole surrenali?", options: ["Sindrome Cushing ACTH indipendente", "Sindrome di Cushing non -ACTH dipendente (se la chirurgia dell’ipofisi non ha avuto successo)", "Iperaldosteronismo (sindrome di Conn)", "Morbo di Addison"], correct: 3, explanation: "Il Morbo di Addison è un'insufficienza corticosurrenalica cronica (spesso autoimmune) che atrofizza le ghiandole, azzerando la produzione di cortisolo. Richiede terapia medica sostitutiva, non vi è alcun ruolo per la chirurgia." },     
+            { id: 221, text: "Quale evento patologico può portare alla scoperta di una neoplasia endocrina del pancreas?", options: ["Crisi ipertensive acute", "Pancreatite acuta", "Polmonite virale", "Alterazioni del tracciato ECG"], correct: 1, explanation: "La pancreatite acuta può presentarsi come una complicanza meccanica rivelatrice: l'accrescimento del tumore neuroendocrino pancreatico (P-NET) può ostruire i dotti pancreatici limitrofi, innescando così l'infiammazione acuta della ghiandola." },
+            { id: 222, text: "Quale dei seguenti P-NET ha la più alta percentuale di benignità?", options: ["Insulinoma", "Gastrinoma", "P-NETs non funzionali (non secernenti ormoni)", "VIPoma"], correct: 0, explanation: "A differenza degli altri tumori neuroendocrini del pancreas che mostrano frequenti comportamenti maligni e invasivi, l'insulinoma sporadico è notoriamente benigno e isolato in circa il 90% dei casi." },
+            { id: 223, text: "Quale tecnica viene utilizzata per il monitoraggio del nervo laringeo inferiore (n. ricorrente) durante l’intervento di tiroidectomia?", options: ["Impiego di ottica laparoscopica ad alta risoluzione", "Impiego di colorazione con verde di indocianina", "Neuro monitoraggio del nervo vago", "Monitoraggio diretto sotto visione mediante identificazione ed isolamento del nervo"], correct: 3, explanation: "Nonostante l'esistenza di sonde per il neuromonitoraggio, lo standard chirurgico primario, essenziale ed insostituibile per preservare il nervo laringeo ricorrente rimane la sua accurata identificazione visiva diretta e il suo isolamento anatomico." },
+            { id: 224, text: "Prima di un intervento chirurgico sulla tiroide quale valutazione preoperatoria è necessaria?", options: ["Test molecolare per B-RAF", "Laringoscopia", "Tac torace", "Tutte le precedenti"], correct: 1, explanation: "La laringoscopia preoperatoria è una valutazione clinica e medico-legale indispensabile per controllare la corretta motilità delle corde vocali, accertandosi che non vi siano paralisi asintomatiche pregresse dei nervi laringei." },
+            { id: 225, text: "Nel caso di carcinoma midollare della tiroide, senza evidenza di metastasi linfonodali del collo, quale procedura chirurgica è indicata?", options: ["Tiroidectomia totale senza linfoadenectomia", "Tiroidectomia totale con linfoadenectomia centrale", "Tiroidectomia totale con linfoadenectomia centrale e dei livelli III e IV", "Tiroidectomia totale con linfoadenectomia centrale e dei livelli II e V"], correct: 1, explanation: "Il carcinoma midollare diffonde precocemente e massicciamente ai linfonodi. Per questo motivo, le linee guida impongono sempre l'associazione di una tiroidectomia totale ad uno svuotamento profilattico del compartimento linfonodale centrale (Livello VI)." },
+            { id: 226, text: "Qual è il peso medio di una paratiroide?", options: ["20 mg", "30 mg", "40 mg", "50 mg"], correct: 1, explanation: "In condizioni fisiologiche di normalità, il peso medio di una singola ghiandola paratiroidea sana si attesta attorno ai 30 milligrammi. " },
+            { id: 227, text: "Rispetto alla forma sporadica, quale condizione peggiore nell’iperparatiroidismo familiare?", options: ["Ipercalcemia calce", "Densità minerale ossea", "Nefrolitiasi", "Alterazioni cardiache"], correct: 1, explanation: "NOTA: è segnata questa come risposta corretta, in quanto i pazienti con iperaparatiroidismo hanno alti livelli di PTH che favorisce la lisi ossea, diminuendone la densità. Tuttavia questo sembrerebbe accadere in tutti i casi di iperparatiroidismo, familiari e non. Invece i pazienti affetti da quadri di iperparatiroidismo familiare (come nelle sindromi MEN1) tendono a sviluppare una forma più aggressiva di nefrolitiasi (calcolosi renale) e complicanze urinarie rispetto a chi è affetto da adenoma sporadico." },
+            { id: 228, text: "Nella adrenalectomia laparoscopica, quale gas viene utilizzato per creare lo spazio chirurgico?", options: ["CO2", "Aria filtrata", "Elio", "Azoto"], correct: 0, explanation: "L'anidride carbonica (CO2) è il gas universalmente utilizzato per creare il pneumoperitoneo o lo pneumoretroperitoneo in laparoscopia: è inerte, non combustibile (sicuro con l'elettrobisturi) e viene facilmente smaltito dai polmoni." },
+            { id: 229, text: "Quale di queste sindromi genetiche può essere associata al carcinoma della corticale del surrene?", options: ["Sindrome di Marfan", "Sindrome di Crigler-Najjar", "Sindrome di Turcot", "Sindrome di Li-Fraumeni"], correct: 3, explanation: "La Sindrome di Li-Fraumeni, patologia rara derivante da una mutazione germinale del gene oncosoppressore TP53, predispone severamente i bambini e i giovani adulti allo sviluppo del letale carcinoma corticosurrenalico." },
+            { id: 230, text: "Quanti trocar vengono utilizzati per effettuare una adrenalectomia laparoscopica?", options: ["2", "3", "4", "5"], correct: 1, explanation: "Standardmente e di base, un'adrenalectomia laparoscopica (specie a sinistra) prevede l'inserimento di 3 trocar: uno destinato all'ottica (telecamera) e due destinati agli strumenti manovrati dalle braccia del chirurgo." },
+            { id: 231, text: "Per quale tipo di patologia viene più frequentemente utilizzata la termoablazione con radiofrequenza o microonde?", options: ["Trattamento delle metastasi polmonari", "Trattamento delle metastasi peritoneali", "Trattamento dei tumori neuroendocrini del pancreas", "Trattamento delle metastasi epatiche"], correct: 3, explanation: "La termoablazione (tramite radiofrequenza o microonde) è uno strumento citoriduttivo di enorme utilità per 'bruciare' localmente i noduli metastatici epatici dei tumori neuroendocrini, arginando il rilascio ormonale sistemico." },
+            { id: 232, text: "Quale delle seguenti è attualmente considerata la procedura diagnostica di primo livello di scelta per la valutazione di un nodulo tiroideo sospetto?", options: ["Ago aspirato per esame citologico (FNA)", "Scintigrafia", "TAC", "RMN"], correct: 0, explanation: "L'Ago Aspirato con ago sottile (FNA), accuratamente guidato sotto visione ecografica, è il 'gold standard' metodologico e la procedura di primissima scelta per definire citologicamente la natura di un nodulo." },
+            { id: 233, text: "Quale ormone viene secreto dal carcinoma midollare della tiroide?", options: ["Ossitocina", "Paratormone", "Calcitonina", "Serotonina"], correct: 2, explanation: "Il Carcinoma Midollare della Tiroide (CMT) origina dalle cellule C parafollicolari della ghiandola, che sintetizzano abbondanti e patologici livelli di calcitonina sierica, la quale funge da marker diagnostico inequivocabile." },
+            { id: 234, text: "Dove si trovano i recettori per il calcio (Calcium-Sensing Receptors)?", options: ["Sulle cellule parafollicolari C della tiroide", "Sulle cellule parafollicolari delle paratiroidi", "Sulle cellule cromaffine", "Sulle cellule parafollicolari delle paratiroidi e C della tiroide"], correct: 3, explanation: "I Recettori sensibili al calcio (CaSR) presidiano strettamente l'omeostasi corporea e si trovano sulle cellule C della tiroide (stimolando la calcitonina) e sulle cellule paratiroidee (inibendo la secrezione di PTH in caso di calcio alto)." },
+            { id: 235, text: "Quale di queste è una manifestazione clinica frequente dell’iperparatiroidismo primario?", options: ["Calcolosi renale", "Calcolosi della colecisti", "Aterosclerosi", "Artrite reumatoide"], correct: 0, explanation: "A causa della massiccia osteolisi e dei livelli persistentemente alti di calcio, i reni si trovano a dover filtrare un surplus minerale notevole (ipercalciuria), favorendo così la rapida precipitazione di cristalli e la conseguente calcolosi renale." },
+            { id: 236, text: "In caso di ipercalcemia, quale variazione nel tracciato ECG è rilevabile?", options: ["Intervallo QT accorciato", "Intervallo QT allungato", "Onda T più corta", "Intervallo PR accorciato"], correct: 0, explanation: "L'eccesso sistemico di calcio velocizza e abbrevia il potenziale d'azione e la fase di ripolarizzazione ventricolare del muscolo cardiaco, traducendosi in maniera patognomonica in un netto accorciamento dell'intervallo QT all'elettrocardiogramma." },
+            { id: 237, text: "Quale dei seguenti metodi di imaging è specifico per identificare un adenoma paratiroideo?", options: ["Octreo-Scan", "MIBG Scan", "Sestamibi SPECT Scan", "Iodio radioattivo Scan"], correct: 2, explanation: "La scintigrafia d'elezione per visualizzare gli adenomi iperfunzionanti delle paratiroidi sfrutta il radiofarmaco Sestamibi marcato con Tecnezio-99m, che viene avidamente incamerato dai mitocondri delle cellule ossifile paratiroidee." },
+            { id: 238, text: "Qual è la strategia chirurgica di scelta per l’iperparatiroidismo familiare (MEN1)?", options: ["Paratiroidectomia totale con autotrapianto di una porzione di ghiandola nel braccio", "Paratiroidectomia monolaterale (2 ghiandole) e lobectomia omolaterale della tiroide", "Paratiroidectomia monolaterale (2 ghiandole)", "Asportazione di una singola paratiroide"], correct: 0, explanation: "Essendo una iperplasia pluri-ghiandolare diffusa ed ereditaria, la rimozione conservativa fallirebbe. Si opta per un'asportazione estesa (subtotale o totale) inserendo chirurgicamente minuscoli frammenti paratiroidei sani nel braccio per facilitarne future ed eventuali re-asportazioni." },
+            { id: 239, text: "L’iperparatiroidismo primario persistente dopo chirurgia delle paratiroidi è dovuto a:", options: ["Errore tecnico (mancata asportazione della ghiandola patologica)", "Recidiva a distanza della patologia paratiroidea", "Storia familiare di iperparatiroidismo primario", "Somministrazione di paratormone dopo la chirurgia"], correct: 0, explanation: "L'iperparatiroidismo si definisce 'persistente' quando la calcemia non cala mai fin dai primissimi giorni post-intervento, confermando che il chirurgo ha tecnicamente fallito nell'isolare l'adenoma bersaglio (magari perché occulto, frammentato o ectopico)." },
+            { id: 240, text: "quando è indicato effettuare interventi sulle paratiroidi con chirurgia mini invasiva?", options: ["Nel caso di carcinoma delle paratiroidi", "Nel caso di un singolo è ben localizzato adenoma", "Nel caso di iperplasia con adenomi multipli a tutte le paratiroidi", "La chirurgia mini invasiva non viene mai utilizzata per interventi sulle paratiroidi"], correct: 1, explanation: "La Paratiroidectomia Mini-Invasiva (MIP) può essere eseguita tramite minuscole incisioni mirate unicamente quando le metodiche diagnostiche preoperatorie concordano con sicurezza indicando un singolo adenoma confinato e perfettamente localizzato." },
+            { id: 241, text: "Quale dei seguenti ormoni è secreto dai cosiddetti carcinoidi (GI-NET) “classici”?", options: ["Adrenalina", "Serotonina", "Calcitonina", "Ossitocina"], correct: 1, explanation: "I tumori carcinoidi 'classici', in particolare quelli derivanti dall'intestino medio (midgut), sono noti per la massiccia secrezione di serotonina e altre sostanze vasoattive responsabili della sindrome da carcinoide." },
+            { id: 242, text: "Nell’iperparatiroidismo primario, come può essere il livello di calcio sierico?", options: ["Elevato", "Normale", "Basso", "Normale o Elevato"], correct: 3, explanation: "Nell'iperparatiroidismo primario, il livello di calcio sierico può presentarsi francamente elevato (ipercalcemia) oppure, specialmente nelle fasi iniziali o in specifiche varianti (iperparatiroidismo normocalcemico), rimanere nei limiti della norma." },
+            { id: 243, text: "Qual è la più frequente causa di iperparatiroidismo secondario?", options: ["Metastasi ossee", "Insufficienza renale cronica", "Adenoma paratiroideo ectopico", "Tumore renale"], correct: 1, explanation: "L'insufficienza renale cronica è la causa predominante dell'iperparatiroidismo secondario: l'incapacità dei reni di convertire la Vitamina D porta a ipocalcemia, che stimola continuamente le paratiroidi a produrre PTH." },
+            { id: 244, text: "Quale delle seguenti procedure chirurgiche può rendersi necessaria durante una tiroidectomia totale se è presente un gozzo retrosternale di grosse dimensioni?", options: ["Asportazione dei linfonodi del collo e del mediastino", "Sternotomia", "Sezione dei muscoli sterno-cleido-mastoidei", "Tutte le precedenti risposte sono corrette"], correct: 1, explanation: "In presenza di un gozzo retrosternale (o cervico-mediastinico) di volumi talmente grossi da non poter essere dislocato nel collo in sicurezza, l'apertura dello sterno (sternotomia) si rende necessaria per estrarre la massa." },
+            { id: 245, text: "Nel caso di un nodulo tiroideo benigno solitario, quale procedura chirurgica più indicata?", options: ["Tiroidectomia totale", "Tiroidectomia subtotale", "Lobectomia tiroidea unilaterale con rimozione dell’istmo", "Rimozione locale del singolo nodulo"], correct: 2, explanation: "La lobectomia unilaterale comprensiva dell'istmo è l'intervento definitivo e di prima scelta per asportare un nodulo benigno solitario confinato a un singolo lobo, minimizzando il rischio chirurgico." },
+            { id: 246, text: "Nel caso di singolo carcinoma tiroideo (TIR5) localizzato in un lobo quale tipo di intervento è necessario effettuare?", options: ["Tiroidectomia totale", "Tiroidectomia subtotale", "Lobectomia tiroidea unilaterale con rimozione dell’istmo", "Rimozione locale del singolo nodulo"], correct: 0, explanation: "Per una lesione con citologia TIR5 (carcinoma accertato/altamente sospetto), le linee guida oncologiche indicano la tiroidectomia totale per eradicare la malattia e permettere le terapie successive." },
+            { id: 247, text: "Che azione viene raccomandata dalle linee guida nel caso di categoria diagnostica TIR1 all’ago aspirato (FNA) di singolo nodulo tiroideo, che iconograficamente ha caratteristiche sospette dimensione superiore a un CM?", options: ["Follow-up senza trattamento chirurgico", "Lobectomia diagnostica", "Tiroidectomia subtotale", "Tiroidectomia totale"], correct: 1, explanation: "Quando il referto è TIR1 (inadeguato/non diagnostico) ma il nodulo è grande e l'ecografia è francamente sospetta, è prudente e raccomandato asportare metà tiroide (lobectomia diagnostica) per avere una diagnosi istologica certa." },
+            { id: 248, text: "Se all’ago aspirato in un nodulo tiroideo (FNA) la diagnosi orienta verso un carcinoma midollare della tiroide, quale delle seguenti procedure diagnostiche è suggerita come primo step dalla Japan Association of Endocrine Surgery?", options: ["Counseling genetico", "Lobectomia diagnostica", "Asportazione di linfonodo sentinella per valutare l’eventuale presenza di metastasi linfonodali", "Valutazione dei valori di calcitonina nel sangue"], correct: 0, explanation: "Il counseling genetico è il primo passo raccomandato perché circa un quarto dei carcinomi midollari della tiroide è ereditario e legato a una mutazione del gene RET, e conoscerla prima dell'operazione è vitale per la tua sicurezza e per la scelta del tipo di chirurgia." },
+            { id: 249, text: "Quale dei seguenti tumori tiroidei può insorgere nell’ambito di una MEN2?", options: ["Follicolare", "Papillare", "Midollare", "Carcinoma delle cellule di Hurtle"], correct: 2, explanation: "Il carcinoma midollare della tiroide è il marker clinico cardine ed immancabile delle sindromi familiari MEN2 (legate a mutazione del proto-oncogene RET)." },
+            { id: 250, text: "Quale delle seguenti è la complicanza più seria della tiroidectomia?", options: ["Danno al nervo laringeo ricorrente", "Rimozione accidentale di una paratiroide", "Cicatrice cheloidea", "Edema laringeo"], correct: 0, explanation: "La lesione (soprattutto bilaterale) del nervo laringeo ricorrente provoca paralisi cordale, incapacità respiratoria e necessità di tracheostomia, configurando la complicanza più temibile della chirurgia tiroidea." },
+            { id: 251, text: "Quali dei seguenti trattamenti può essere indicato dopo tiroidectomia totale o quasi totale per carcinoma della tiroide di qualunque variante istologica?", options: ["Terapia orale base di calcitonina", "Supplementazione di vitamina D", "Idratazione endovenosa sporadica", "Cicli di ablazione con radioiodio"], correct: 3, explanation: "Sebbene in modo vario a seconda delle 'varianti', per la stragrande maggioranza dei carcinomi differenziati della tiroide, l'ablazione con radioiodio (131-I) è il trattamento post-chirurgico d'elezione per distruggere ogni residuo o micrometastasi." },
+            { id: 252, text: "Quale delle seguenti è associata a MEN2?", options: ["Insulinoma;", "Carcinoma papillare della tiroide;", "Feocromocitoma;", "Gastrinoma"], correct: 2, explanation: "La Neoplasia Endocrina Multipla di tipo 2 (MEN2) si presenta tipicamente con la classica associazione di carcinoma midollare della tiroide e feocromocitoma (presente in circa il 50% dei casi)." },
+            { id: 253, text: "La legge del 10 può essere applicata a quale di questi tumori?", options: ["Feocromocitoma", "Carcinoide", "Carcinoma midollare della tiroide", "Tumore papillare della tiroide"], correct: 0, explanation: "La 'legge del 10' è storicamente e classicamente associata al Feocromocitoma (10% extra-surrenalico, 10% maligno, 10% bilaterale, 10% familiare, 10% pediatrico)." },
+            { id: 254, text: "La causa più frequente di iperparatiroidismo primario sporadico è:", options: ["Adenoma paratiroideo", "Iperplasia paratiroidea", "Carcinoma paratiroideo", "Ectopica"], correct: 0, explanation: "Nella stragrande maggioranza dei casi (circa 80-85%), l'iperparatiroidismo primario in forma sporadica è sostenuto dalla presenza di un singolo adenoma benigno a carico di una paratiroide." },
+            { id: 255, text: "La sindrome da carcinoide si scatena dopo quale insufficienza?", options: ["Insufficienza epatica", "Insufficienza cardiaca (per stenosi delle valvole)", "Insufficienza renale", "Insufficienza respiratoria"], correct: 1, explanation: "Attenendosi strettamente alla chiave di risposta fornita nel testo: 'Insufficienza cardiaca (per stenosi delle valvole)'. (Nota clinica: le placche fibrose indotte dalla serotonina causano danni stenosanti al cuore destro, portando ad insufficienza cardiaca)." },
+            { id: 256, text: "Qual è il trattamento chirurgico preferito nei pazienti con iperplasia multi-ghiandolare per iperparatiroidismo familiare (MEN1)?", options: ["Resezione della ghiandola superiore e inferiore di un lato, lasciando le altre due ghiandole del lato opposto", "Resezione di una singola ghiandola ingrossata macroscopicamente", "Paratiroidectomia totale con autotrapianto di frammenti di tessuto paratiroideo dall'avambraccio", "Non c'è indicazione chirurgica ma solo per terapia medica"], correct: 2, explanation: "Essendo una iperplasia pluri-ghiandolare su base genetica, il trattamento chirurgico di scelta per prevenire recidive cervicali è la rimozione totale con successivo autotrapianto in un sito facilmente accessibile come l'avambraccio." },
+            { id: 257, text: "Carcinoide più comune con origine nell'intestino medio (midgut):", options: ["Appendice", "Pancreas", "Diverticolo di Meckel", "Stomaco"], correct: 0, explanation: "NOTA: Il 45% di tutti i GI-NETs sono del piccolo intestino, in particolare nell'ileo distale (facente parte dell'intestino medio). Tra quelli elencati l'apendice è il più frequente, secondo tra quelli del midgut" },
+            { id: 258, text: "Lo standard d'oro per l'adenoma corticale surrenalico singolo è:", options: ["Adrenalectomia totale laparoscopica/rimozione unilaterale laparoscopica", "Adrenalectomia bilaterale open", "Tumorectomia a cielo aperto", "Radioterapia locale"], correct: 0, explanation: "L'approccio in assoluto ritenuto il 'gold standard' per aggredire un singolo adenoma del surrene (es. adenomi di Cushing o Conn) è l'adrenalectomia unilaterale per via laparoscopica." },
+            { id: 259, text: "Il PTH agisce su quali cellule?", options: ["Osteoclasti", "Osteoblasti", "Cellule C parafollicolari", "Cellule parietali gastriche"], correct: 0, explanation: "Il Paratormone (PTH) agisce massicciamente a livello osseo stimolando gli osteoclasti (in via indiretta e diretta) per aumentare il riassorbimento della matrice ossea e innalzare la calcemia." },
+            { id: 260, text: "Qual è la complicanza più grave della chirurgia tiroidea?", options: ["Ipotiroidismo", "Ipertiroidismo", "Danno al nervo vago", "Infezione superficiale della ferita"], correct: 0, explanation: "Attenendosi in maniera specifica al testo sorgente fornito: l'ipotiroidismo. (L'asportazione chirurgica totale induce infatti l'azzeramento della produzione ormonale endogena che necessita di compenso a vita)." },
+			
+			// DOMANDE AGGIUNTE DOPO L'APPELLO DI MARZO
+			{ id: 261, text: "il 51 gene test per che tipo di tumore è usato?", options: ["pancreas", "feocromocitoma", "tuomre midollare del surrene", "tumore corticale del surrene"], correct: 0, explanation: "è tra le domande che ho aggiunto dopo e non ho voglia di cercare una spiegazione. GRAZIE DELLA COMPRENSIONE ♥" },
+            { id: 262, text: "percentuale di mailgnità alla diagnosi di tumore al pacnreas", options: ["60%", "80%", "40%", "20%"], correct: 0, explanation: "è tra le domande che ho aggiunto dopo e non ho voglia di cercare una spiegazione. GRAZIE DELLA COMPRENSIONE ♥" },
+            { id: 263, text: "la chirurgia retro peritoneale è", options: ["sempre extraperitoneale", "con il paziente supino", "sempre intraperitoneale", "si usano due trocar"], correct: 0, explanation: "è tra le domande che ho aggiunto dopo e non ho voglia di cercare una spiegazione. GRAZIE DELLA COMPRENSIONE ♥" },
+            { id: 264, text: "cromosoma della mutazione RET nel MEN2", options: ["10", "11", "13", "21"], correct: 0, explanation: "è tra le domande che ho aggiunto dopo e non ho voglia di cercare una spiegazione. GRAZIE DELLA COMPRENSIONE ♥" },
+            { id: 265, text: "dopo la paratiroidectomia può arrivare e persistere una di queste complicanze", options: ["problemi cardiovascolari persistenti", "densità ossea", "ipercelcemia", "calcoli renali"], correct: 0, explanation: "è tra le domande che ho aggiunto dopo e non ho voglia di cercare una spiegazione. GRAZIE DELLA COMPRENSIONE ♥" },
+            { id: 266, text: "in tiroidectomia con incisione di Krocer viene tagliato il muscono sterno ioideo?", options: ["no, tranne in casi particolari", "si, sempre", "si, e anche lo sterno mastoideo", "vaffanculo"], correct: 0, explanation: "è tra le domande che ho aggiunto dopo e non ho voglia di cercare una spiegazione. GRAZIE DELLA COMPRENSIONE ♥" },
+            { id: 267, text: "con che tipo di biopsia si può operare un nodulo pancreatico?", options: ["transgastrica eco-guidata", "transesofagea", "percutanea", "retroperitoneale"], correct: 0, explanation: "è tra le domande che ho aggiunto dopo e non ho voglia di cercare una spiegazione. GRAZIE DELLA COMPRENSIONE ♥" },
+            { id: 268, text: "cosa bisogna spostare per operare il surrene?", options: ["lobo epatico destro", "milza", "stomaco", "rene"], correct: 0, explanation: "è tra le domande che ho aggiunto dopo e non ho voglia di cercare una spiegazione. GRAZIE DELLA COMPRENSIONE ♥" },
+            { id: 279, text: "in quale patologia si può trovare l'iperparatiroidismo?", options: ["MEN1 e MEN2A", "MEN1", "MEN2", "MEN1 e MEN2B"], correct: 0, explanation: "è tra le domande che ho aggiunto dopo e non ho voglia di cercare una spiegazione. GRAZIE DELLA COMPRENSIONE ♥" },
+            { id: 270, text: "periodo di ospedelizzazione dopo laparoscopia mini invasiva", options: ["2-3 giorni", "4-5 giorni", "6-7 giorni", "9-10 giorni"], correct: 0, explanation: "è tra le domande che ho aggiunto dopo e non ho voglia di cercare una spiegazione. GRAZIE DELLA COMPRENSIONE ♥" }
+			
+        ];
+        // STATO DELL'APP
+        let state = {
+            currentQuiz: [],
+            currentIndex: 0,
+            score: 0,
+            isReviewMode: false,
+            sessionErrors: [],
+            sessionFlags: [], 
+            errorBank: [],
+            history: [],
+            questionExposure: {} 
+        };
+
+        // STATISTICHE GLOBALI
+        let globalStats = { totalQuizzes: 0, totalQuestions: 0, correctAnswers: 0 };
+        let trendChartInstance = null;
+
+        // INIZIALIZZAZIONE E LOCAL STORAGE
+        window.onload = function() {
+            initTheme();
+            loadData();
+            updateUIHome();
+            setupKeyboardShortcuts();
+        };
+
+        // GESTIONE COMANDI DA TASTIERA
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', (e) => {
+                // Evita scatti multipli involontari se si tiene premuto il tasto a lungo
+                if (e.repeat && (e.key === 'Enter' || e.key === ' ')) return;
+
+                const isQuizView = !document.getElementById('quiz-view').classList.contains('hidden');
+                const isResultView = !document.getElementById('result-view').classList.contains('hidden');
+                const isHomeView = !document.getElementById('home-view').classList.contains('hidden');
+
+                if (isQuizView) {
+                    // Tasti 1-5 per selezionare l'opzione (alcune domande hanno 5 risposte)
+                    if (['1', '2', '3', '4', '5'].includes(e.key)) {
+                        const index = parseInt(e.key) - 1;
+                        const buttons = document.getElementById('options-container').querySelectorAll('button');
+                        if (buttons[index] && !buttons[index].disabled) {
+                            buttons[index].click();
+                        }
+                    }
+
+                    // Tasto 'R' per contrassegnare/rimuovere il dubbio (Revisionare)
+                    if (e.key.toLowerCase() === 'r') {
+                        toggleFlag();
+                    }
+                    
+                    // Spazio o Invio per andare avanti
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        if (document.activeElement) document.activeElement.blur(); // Rimuove il focus per evitare "click fantasma"
+                        
+                        if (!document.getElementById('btn-next').classList.contains('hidden')) {
+                            document.getElementById('btn-next').click();
+                        } else if (!document.getElementById('btn-finish').classList.contains('hidden')) {
+                            document.getElementById('btn-finish').click();
+                        }
+                    }
+                } else if (isResultView) {
+                    // Spazio o Invio per tornare alla Home dopo aver visto i risultati
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        if (document.activeElement) document.activeElement.blur();
+                        returnToHome();
+                    }
+                } else if (isHomeView) {
+                    // Spazio o Invio per avviare un nuovo quiz rapido
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        if (document.activeElement) document.activeElement.blur();
+                        startQuiz('new');
+                    }
+                    // Tasto 'R' per far partire al volo il ripasso errori (se abilitato)
+                    if (e.key.toLowerCase() === 'r') {
+                        e.preventDefault();
+                        const reviewBtn = document.getElementById('btn-review-errors');
+                        if (!reviewBtn.disabled) {
+                            startQuiz('review');
+                        }
+                    }
+                }
+            });
+        }
+
+        // GESTIONE TEMA DARK MODE
+        function initTheme() {
+            const storedTheme = localStorage.getItem('endocrino_theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const isDark = storedTheme === 'dark' || (!storedTheme && prefersDark);
+            
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+            updateThemeUI(isDark);
+        }
+
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            html.classList.toggle('dark');
+            const isDark = html.classList.contains('dark');
+            localStorage.setItem('endocrino_theme', isDark ? 'dark' : 'light');
+            updateThemeUI(isDark);
+            
+            // Rimuove il focus dal bottone appena viene cliccato
+            const toggleBtn = document.getElementById('theme-toggle');
+            if (toggleBtn) toggleBtn.blur();
+            
+            if(!document.getElementById('home-view').classList.contains('hidden')) {
+                updateTrendChart(); 
+            }
+        }
+
+        function updateThemeUI(isDark) {
+            const icon = document.getElementById('theme-icon');
+            const text = document.getElementById('theme-text');
+            if (icon && text) {
+                icon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+                text.innerText = isDark ? 'Light Mode' : 'Dark Mode';
+            }
+        }
+
+        function loadData() {
+            try {
+                const storedErrors = localStorage.getItem('endocrino_errors');
+                if (storedErrors) state.errorBank = JSON.parse(storedErrors);
+
+                const storedHistory = localStorage.getItem('endocrino_history');
+                if (storedHistory) state.history = JSON.parse(storedHistory);
+
+                const storedStats = localStorage.getItem('endocrino_stats');
+                if (storedStats) globalStats = JSON.parse(storedStats);
+                
+                const storedExposure = localStorage.getItem('endocrino_exposure');
+                if (storedExposure) state.questionExposure = JSON.parse(storedExposure);
+            } catch(e) { console.error("Errore lettura local storage", e); }
+        }
+
+        function saveData() {
+            try {
+                localStorage.setItem('endocrino_errors', JSON.stringify(state.errorBank));
+                localStorage.setItem('endocrino_history', JSON.stringify(state.history));
+                localStorage.setItem('endocrino_stats', JSON.stringify(globalStats));
+                localStorage.setItem('endocrino_exposure', JSON.stringify(state.questionExposure));
+            } catch(e) { console.error("Errore salvataggio local storage", e); }
+        }
+
+        function resetData() {
+            if (confirm("Vuoi davvero azzerare tutte le tue statistiche, lo storico e gli errori da ripassare? L'azione è irreversibile.")) {
+                state.errorBank = [];
+                state.history = [];
+                state.questionExposure = {};
+                globalStats = { totalQuizzes: 0, totalQuestions: 0, correctAnswers: 0 };
+                localStorage.removeItem('endocrino_errors');
+                localStorage.removeItem('endocrino_history');
+                localStorage.removeItem('endocrino_stats');
+                localStorage.removeItem('endocrino_exposure');
+                updateUIHome();
+            }
+        }
+
+        // GESTIONE HOME VIEW E STATISTICHE
+        function updateUIHome() {
+            document.getElementById('home-view').classList.remove('hidden');
+            document.getElementById('quiz-view').classList.add('hidden');
+            document.getElementById('result-view').classList.add('hidden');
+
+            const errorCount = state.errorBank.length;
+            document.getElementById('error-count').innerText = errorCount;
+            document.getElementById('btn-review-errors').disabled = errorCount === 0;
+
+            document.getElementById('stat-quizzes').innerText = globalStats.totalQuizzes;
+            document.getElementById('stat-questions').innerText = globalStats.totalQuestions;
+            
+            const acc = globalStats.totalQuestions > 0 
+                        ? Math.round((globalStats.correctAnswers / globalStats.totalQuestions) * 100) 
+                        : 0;
+            document.getElementById('stat-accuracy').innerText = acc + "%";
+            
+            // Calcolo percentuale Viste sul totale del database
+            const coveragePerc = Math.round((globalStats.totalQuestions / allQuestions.length) * 100);
+            document.getElementById('stat-coverage').innerText = "(" + coveragePerc + "%)";
+
+            updateTrendChart();
+        }
+
+        function updateTrendChart() {
+            const canvas = document.getElementById('trendChart');
+            const noMsg = document.getElementById('no-history-msg');
+
+            if (state.history.length === 0) {
+                canvas.style.display = 'none';
+                noMsg.classList.remove('hidden');
+                return;
+            }
+
+            canvas.style.display = 'block';
+            noMsg.classList.add('hidden');
+
+            const chronologicalHistory = [...state.history].reverse();
+            
+            const labels = chronologicalHistory.map(() => '');
+            const dataPoints = chronologicalHistory.map(h => Math.round((h.score / h.total) * 100));
+
+            if (trendChartInstance) {
+                trendChartInstance.destroy(); 
+            }
+
+            const ctx = canvas.getContext('2d');
+            const isDark = document.documentElement.classList.contains('dark');
+            
+            let gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(17, 24, 39, 0.05)'); 
+            gradient.addColorStop(1, isDark ? 'rgba(255, 255, 255, 0.0)' : 'rgba(17, 24, 39, 0.0)'); 
+
+            const lineColor = isDark ? '#d4d4d8' : '#111827';
+            const tickColor = isDark ? '#737373' : '#9ca3af';
+
+            trendChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Punteggio (%)',
+                        data: dataPoints,
+                        borderColor: lineColor, 
+                        backgroundColor: gradient,
+                        borderWidth: 1.5,
+                        pointBackgroundColor: isDark ? '#111827' : '#ffffff',
+                        pointBorderColor: lineColor,
+                        pointBorderWidth: 1.5,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        fill: true,
+                        tension: 0.4, 
+                        clip: false 
+                    }]
+                },
+                options: {
+                    layout: {
+                        padding: { top: 15, right: 10, left: 0, bottom: 0 }
+                    },
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) { return value + '%' },
+                                font: { family: 'Inter', size: 10, weight: '300' },
+                                color: tickColor,
+                                maxTicksLimit: 5
+                            },
+                            grid: { display: false, drawBorder: false },
+                            border: { display: false }
+                        },
+                        x: { display: false }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: isDark ? 'rgba(20, 20, 20, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                            titleColor: tickColor,
+                            bodyColor: isDark ? '#f3f4f6' : '#111827',
+                            borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#f3f4f6',
+                            borderWidth: 1,
+                            titleFont: { family: 'Inter', size: 10, weight: 'normal' },
+                            bodyFont: { family: 'Inter', size: 13, weight: '600' },
+                            padding: 10,
+                            cornerRadius: 8,
+                            displayColors: false,
+                            callbacks: {
+                                title: function(context) {
+                                    const index = context[0].dataIndex;
+                                    const item = chronologicalHistory[index];
+                                    return item.type === 'Ripasso' ? 'Mod: Ripasso' : 'Mod: Casuale';
+                                },
+                                label: function(context) {
+                                    return context.parsed.y + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function changeNum(delta) {
+            const input = document.getElementById('num-questions');
+            let val = parseInt(input.value);
+            if (isNaN(val)) val = 20;
+            val += delta;
+            if (val < 1) val = 1;
+            if (val > 270) val = 270; 
+            input.value = val;
+        }
+
+        function shuffleArray(array) {
+            let currentIndex = array.length, randomIndex;
+            while (currentIndex !== 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        }
+
+        // AVVIO QUIZ CON ALGORITMO DI SMART SPACING
+        function startQuiz(mode) {
+            state.score = 0;
+            state.currentIndex = 0;
+            state.sessionErrors = [];
+            state.sessionFlags = []; 
+            state.isReviewMode = (mode === 'review');
+
+            if (mode === 'new') {
+                const num = parseInt(document.getElementById('num-questions').value);
+                const validNum = isNaN(num) || num < 1 ? 10 : (num > 270 ? 270 : num); 
+                
+                let exposureGroups = {};
+                allQuestions.forEach(q => {
+                    const exp = state.questionExposure[q.id] || 0;
+                    if (!exposureGroups[exp]) exposureGroups[exp] = [];
+                    exposureGroups[exp].push(q);
+                });
+
+                let sortedExposures = Object.keys(exposureGroups).map(Number).sort((a, b) => a - b);
+
+                let prioritizedQuestions = [];
+                sortedExposures.forEach(exp => {
+                    let group = shuffleArray([...exposureGroups[exp]]);
+                    prioritizedQuestions = prioritizedQuestions.concat(group);
+                });
+
+                let selectedQuestions = prioritizedQuestions.slice(0, validNum);
+
+                selectedQuestions.forEach(q => {
+                    state.questionExposure[q.id] = (state.questionExposure[q.id] || 0) + 1;
+                });
+                saveData(); 
+
+                state.currentQuiz = shuffleArray(selectedQuestions);
+                
+            } else {
+                state.currentQuiz = allQuestions.filter(q => state.errorBank.includes(q.id));
+                state.currentQuiz = shuffleArray(state.currentQuiz);
+            }
+
+            document.getElementById('home-view').classList.add('hidden');
+            document.getElementById('quiz-view').classList.remove('hidden');
+            
+            renderQuestion();
+        }
+
+        // GESTIONE FLAG (DUBBI)
+        function toggleFlag() {
+            const btn = document.getElementById('btn-flag');
+            const icon = btn.querySelector('i');
+            const qId = state.currentQuiz[state.currentIndex].id;
+            
+            if (state.sessionFlags.includes(qId)) {
+                state.sessionFlags = state.sessionFlags.filter(id => id !== qId);
+                btn.classList.remove('text-yellow-400', 'dark:text-yellow-500');
+                btn.classList.add('text-gray-300', 'dark:text-gray-600');
+            } else {
+                state.sessionFlags.push(qId);
+                btn.classList.remove('text-gray-300', 'dark:text-gray-600');
+                btn.classList.add('text-yellow-400', 'dark:text-yellow-500');
+            }
+        }
+
+        // RENDER DOMANDA
+        function renderQuestion() {
+            const q = state.currentQuiz[state.currentIndex];
+            
+            document.getElementById('quiz-progress').innerText = `${state.currentIndex + 1} / ${state.currentQuiz.length} ${state.isReviewMode ? '(Ripasso)' : ''}`;
+            document.getElementById('score-live').innerText = `Punti: ${state.score}`;
+            document.getElementById('progress-bar-fill').style.width = `${(state.currentIndex / state.currentQuiz.length) * 100}%`;
+
+            const animContainer = document.getElementById('question-anim-container');
+            animContainer.classList.remove('slide-in-right');
+            void animContainer.offsetWidth; 
+            animContainer.classList.add('slide-in-right');
+
+            document.getElementById('question-text').innerText = q.text;
+
+            const flagBtn = document.getElementById('btn-flag');
+            if (state.sessionFlags.includes(q.id)) {
+                flagBtn.className = "text-yellow-400 dark:text-yellow-500 transition-colors text-lg sm:text-xl shrink-0 mt-1 p-2 -mr-2";
+            } else {
+                flagBtn.className = "text-gray-300 dark:text-gray-600 hover:text-yellow-400 dark:hover:text-yellow-500 transition-colors text-lg sm:text-xl shrink-0 mt-1 p-2 -mr-2";
+            }
+
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+            
+            let shuffledOptions = q.options.map((optText, index) => ({ text: optText, originalIndex: index }));
+            shuffledOptions = shuffleArray(shuffledOptions);
+            
+            shuffledOptions.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left px-4 sm:px-5 py-3.5 sm:py-4 rounded-2xl border-2 border-gray-200 dark:border-white/10 hover:border-gray-400 dark:hover:border-white/30 hover:bg-gray-50 dark:hover:bg-white/5 transition-all duration-300 font-light text-gray-700 dark:text-gray-300 shadow-sm flex items-center";
+                btn.innerHTML = `<span class="opacity-30 mr-3 text-[10px] sm:text-xs font-bold w-4 text-center border-r border-gray-300 dark:border-gray-600 pr-3">${idx+1}</span><span class="text-sm sm:text-base">${opt.text}</span>`;
+                btn.dataset.originalIndex = opt.originalIndex; 
+                btn.onclick = () => checkAnswer(opt.originalIndex, btn);
+                container.appendChild(btn);
+            });
+
+            document.getElementById('feedback-area').className = "p-4 sm:p-5 rounded-2xl hidden border-2 transition-all mb-4";
+            document.getElementById('btn-next').classList.add('hidden');
+            document.getElementById('btn-finish').classList.add('hidden');
+        }
+
+        // LOGICA RISPOSTA
+        function checkAnswer(selectedIndex, clickedBtn) {
+            const q = state.currentQuiz[state.currentIndex];
+            const isCorrect = (selectedIndex === q.correct);
+            
+            const buttons = document.getElementById('options-container').querySelectorAll('button');
+            buttons.forEach((btn) => {
+                btn.disabled = true;
+                btn.classList.add('disabled-btn');
+                
+                const originalIdx = parseInt(btn.dataset.originalIndex);
+                
+                if (originalIdx === q.correct) {
+                    btn.classList.add('correct-btn'); 
+                    btn.classList.remove('disabled-btn');
+                } else if (originalIdx === selectedIndex && !isCorrect) {
+                    btn.classList.add('wrong-btn'); 
+                    btn.classList.remove('disabled-btn');
+                }
+            });
+
+            if (isCorrect) {
+                state.score++;
+                if (state.isReviewMode) {
+                    state.errorBank = state.errorBank.filter(id => id !== q.id);
+                }
+            } else {
+                state.sessionErrors.push({...q, isFlagged: false});
+                if (!state.errorBank.includes(q.id)) {
+                    state.errorBank.push(q.id);
+                }
+            }
+
+            saveData(); 
+            showFeedback(isCorrect, q.explanation);
+
+            if (state.currentIndex < state.currentQuiz.length - 1) {
+                document.getElementById('btn-next').classList.remove('hidden');
+            } else {
+                document.getElementById('progress-bar-fill').style.width = '100%';
+                document.getElementById('btn-finish').classList.remove('hidden');
+            }
+        }
+
+        function showFeedback(isCorrect, explanation) {
+            const area = document.getElementById('feedback-area');
+            const icon = document.getElementById('feedback-icon');
+            const title = document.getElementById('feedback-title');
+            
+            area.className = "p-4 sm:p-5 rounded-2xl border-2 transition-all block fade-in mb-4";
+            
+            if (isCorrect) {
+                area.classList.add('bg-green-50/50', 'dark:bg-green-900/30', 'border-green-400', 'dark:border-green-600', 'text-green-800', 'dark:text-green-300');
+                icon.innerHTML = '<i class="fas fa-check text-green-600"></i>';
+                title.innerText = "Corretta";
+            } else {
+                area.classList.add('bg-red-50/50', 'dark:bg-red-900/30', 'border-red-400', 'dark:border-red-600', 'text-red-800', 'dark:text-red-300');
+                icon.innerHTML = '<i class="fas fa-times text-red-600"></i>';
+                title.innerText = "Errata";
+            }
+            
+            document.getElementById('feedback-explanation').innerText = explanation;
+        }
+
+        function nextQuestion() {
+            state.currentIndex++;
+            renderQuestion();
+        }
+
+        function finishQuiz() {
+            state.sessionFlags.forEach(flagId => {
+                if (!state.errorBank.includes(flagId)) {
+                    state.errorBank.push(flagId); 
+                }
+                if (!state.sessionErrors.find(e => e.id === flagId)) {
+                    const qObj = allQuestions.find(q => q.id === flagId);
+                    state.sessionErrors.push({...qObj, isFlagged: true});
+                }
+            });
+
+            const dateStr = new Date().toLocaleDateString('it-IT', { hour: '2-digit', minute:'2-digit' });
+            state.history.unshift({
+                date: dateStr,
+                type: state.isReviewMode ? 'Ripasso' : 'Casuale',
+                score: state.score,
+                total: state.currentQuiz.length
+            });
+            if (state.history.length > 10) state.history.pop();
+            
+            globalStats.totalQuizzes++;
+            globalStats.totalQuestions += state.currentQuiz.length;
+            globalStats.correctAnswers += state.score;
+
+            saveData();
+
+            document.getElementById('quiz-view').classList.add('hidden');
+            document.getElementById('result-view').classList.remove('hidden');
+
+            const perc = Math.round((state.score / state.currentQuiz.length) * 100);
+            document.getElementById('final-score-text').innerText = `${state.score} / ${state.currentQuiz.length}`;
+            
+            let subtext = "";
+            if (perc >= 90) subtext = "Eccezionale. Preparazione molto solida.";
+            else if (perc >= 70) subtext = "Ottimo lavoro. Buon livello di preparazione.";
+            else if (perc >= 50) subtext = "Sufficiente. Da rivedere alcune lacune.";
+            else subtext = "Insufficiente. Richiede ripasso approfondito.";
+            document.getElementById('final-score-subtext').innerText = `${perc}% — ${subtext}`;
+
+            const errList = document.getElementById('errors-list');
+            errList.innerHTML = '';
+            
+            if (state.sessionErrors.length === 0) {
+                document.getElementById('perfect-score-msg').classList.remove('hidden');
+                document.getElementById('session-errors-container').classList.add('hidden');
+            } else {
+                document.getElementById('perfect-score-msg').classList.add('hidden');
+                document.getElementById('session-errors-container').classList.remove('hidden');
+                
+                state.sessionErrors.forEach(q => {
+                    const el = document.createElement('div');
+                    el.className = "border-b border-gray-100 dark:border-white/10 pb-5 last:border-0 transition-colors";
+                    
+                    const badgeHTML = q.isFlagged 
+                        ? `<span class="bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded ml-2 tracking-widest"><i class="fas fa-bookmark mr-1"></i> Dubbio</span>`
+                        : `<span class="bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded ml-2 tracking-widest"><i class="fas fa-times mr-1"></i> Errore</span>`;
+
+                    el.innerHTML = `
+                        <p class="font-medium text-gray-800 dark:text-gray-200 mb-3 text-sm sm:text-base leading-snug">${q.text} ${badgeHTML}</p>
+                        <p class="text-green-600 dark:text-green-400 font-light text-xs sm:text-sm mb-2"><i class="fas fa-arrow-right mr-1 opacity-70"></i> ${q.options[q.correct]}</p>
+                        <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-light leading-relaxed mt-1">${q.explanation}</p>
+                    `;
+                    errList.appendChild(el);
+                });
+            }
+        }
+
+        function returnToHome() {
+            updateUIHome();
+        }
+
+    </script>
+</body>
+</html>
